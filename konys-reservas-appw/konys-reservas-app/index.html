@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Konys Pizza · Reserva tu mesa</title>
+  <meta name="description" content="Konys Pizza, la pizza más icónica de Bucaramanga. Consulta la disponibilidad de mesas y reserva en línea.">
+  <meta name="theme-color" content="#641C23">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M12 26 L52 26 L34 60.5 Q32 63.5 30 60.5 Z' fill='%23F2A541'/%3E%3Cellipse cx='32' cy='24' rx='21' ry='10' fill='%23FFCB52'/%3E%3Ccircle cx='22' cy='22' r='4' fill='%23D6402A'/%3E%3Ccircle cx='34' cy='19' r='4' fill='%23D6402A'/%3E%3Ccircle cx='44' cy='24' r='3.5' fill='%23D6402A'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <!-- ===================== Encabezado (fijo) ===================== -->
+  <header class="site-header" id="site-header">
+    <div class="container header-row">
+      <a href="#inicio" class="brand" data-go="inicio" aria-label="Konys Pizza, inicio">
+        <i data-cone="46"></i>
+        <span class="brand-name"><b>KONYS</b><small>PIZZA</small></span>
+      </a>
+      <nav class="nav" aria-label="Principal">
+        <a href="#inicio" class="active" data-nav="inicio">Inicio</a>
+        <a href="#mesas" data-nav="mesas">Mesas</a>
+        <a href="#carta" data-nav="carta">Carta</a>
+        <a href="#mesas" data-nav="reservar">Reservar</a>
+        <a href="#contacto" data-nav="contacto">Contacto</a>
+      </nav>
+      <div class="header-actions">
+        <a class="domicilios" href="#contacto"><i data-icon="whatsapp" data-size="18"></i>Domicilios</a>
+        <span class="vline"></span>
+        <a href="admin.html" class="btn btn-ghost-light btn-sm btn-admin"><i data-icon="lock" data-size="16"></i>Admin</a>
+        <button class="btn btn-ghost-light btn-icon menu-btn" id="menu-open" aria-label="Abrir menú"><i data-icon="menu"></i></button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Menú móvil (Figma 6.2) -->
+  <div class="mobile-menu" id="mobile-menu" hidden>
+    <div class="header-row">
+      <span class="brand"><i data-cone="36"></i><span class="brand-name"><b>KONYS</b><small>PIZZA</small></span></span>
+      <button class="btn btn-ghost-light btn-icon" id="menu-close" aria-label="Cerrar menú"><i data-icon="x"></i></button>
+    </div>
+    <nav aria-label="Menú móvil">
+      <a href="#inicio" class="active"><span><i data-icon="home" data-size="22"></i>Inicio</span><i data-icon="cr" data-size="18"></i></a>
+      <a href="#mesas"><span><i data-icon="table" data-size="22"></i>Mesas</span><i data-icon="cr" data-size="18"></i></a>
+      <a href="#carta"><span><i data-icon="utensils" data-size="22"></i>Carta</span><i data-icon="cr" data-size="18"></i></a>
+      <a href="#mesas"><span><i data-icon="calendar" data-size="22"></i>Reservar</span><i data-icon="cr" data-size="18"></i></a>
+      <a href="#contacto"><span><i data-icon="whatsapp" data-size="22"></i>Contacto</span><i data-icon="cr" data-size="18"></i></a>
+    </nav>
+    <div class="mm-foot">
+      <div class="mm-info">
+        <div class="footer-item"><i data-icon="pin" data-size="16"></i>Cra. 36 con calle 41, Bucaramanga</div>
+        <div class="footer-item"><i data-icon="clock" data-size="16"></i>Mar – Dom · 12:30 – 2:30 p. m. y 5:00 – 11:00 p. m.</div>
+      </div>
+      <a href="#mesas" class="btn btn-primary btn-lg btn-block"><i data-icon="calendar" data-size="18"></i>Reserva tu mesa</a>
+      <a href="admin.html" class="mm-admin"><i data-icon="lock" data-size="16"></i>Acceso administrador</a>
+    </div>
+  </div>
+
+  <!-- ===================== Vista: Inicio ===================== -->
+  <main id="vista-inicio">
+    <section class="site-top" id="inicio">
+      <div class="container hero">
+        <div class="hero-copy">
+          <span class="chip chip-dark"><i data-icon="pin" data-size="15" data-color="#F28C28"></i>Cra. 36 con calle 41 · Bucaramanga</span>
+          <div class="hero-title">
+            <h1 class="display">KONYS<br><span class="orange">PIZZA</span></h1>
+            <p class="hero-slogan">La pizza más icónica de la ciudad</p>
+          </div>
+          <p class="body-lg hero-text">Pizza en cono, recién horneada y lista para compartir. Ahora puedes ver la disponibilidad en tiempo real y apartar tu mesa en menos de un minuto.</p>
+          <div class="hero-ctas">
+            <a href="#mesas" class="btn btn-primary btn-lg"><i data-icon="calendar" data-size="18"></i>Reserva tu mesa</a>
+            <a href="#carta" class="btn btn-ghost-light btn-lg">Ver la carta<i data-icon="arrowr" data-size="18"></i></a>
+          </div>
+          <div class="hero-stats">
+            <div><b>34.900+</b><span>seguidores<span class="long"> en Instagram</span></span></div>
+            <div><b>2 jornadas</b><span>almuerzo<span class="long"> y noche</span></span></div>
+            <div><b><span class="long">Terraza y salón</span><span class="short">2 zonas</span></b><span><span class="long">elige tu </span>ambiente</span></div>
+          </div>
+        </div>
+        <div class="hero-art" id="hero-art">
+          <div class="float-card float-a"><i data-icon="star" data-size="20" data-color="#F28C28"></i><div><span class="label">La más icónica</span><span class="caption muted">de Bucaramanga</span></div></div>
+          <div class="float-card float-b"><span class="ic"><i data-icon="calcheck" data-size="18" data-color="#16A34A"></i></span><div><span class="label">Reserva en línea</span><span class="caption muted">sin llamadas ni esperas</span></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Mesas (RF-01, RF-02) -->
+    <section class="section section-gray" id="mesas">
+      <div class="container">
+        <div class="section-head">
+          <div class="section-title">
+            <span class="overline orange">Nuestras mesas</span>
+            <h2 class="h2">Elige dónde quieres comer</h2>
+            <p class="body-lg muted">Consulta la zona, la capacidad y la disponibilidad de cada mesa antes de reservar.</p>
+          </div>
+          <div class="section-tools">
+            <div class="tabs" role="tablist" aria-label="Filtrar por zona" id="zona-tabs">
+              <button class="tab" role="tab" aria-selected="true" data-zona="todas">Todas</button>
+              <button class="tab" role="tab" aria-selected="false" data-zona="terraza">Terraza</button>
+              <button class="tab" role="tab" aria-selected="false" data-zona="salon">Salón</button>
+            </div>
+            <div class="legend-row"><span class="chip chip-libre"><span class="dot"></span>Libre</span><span class="chip chip-ocupada"><span class="dot"></span>Ocupada</span></div>
+          </div>
+        </div>
+        <div class="grid-4" id="mesas-grid" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- Carta (RF-07) -->
+    <section class="section" id="carta">
+      <div class="container">
+        <div class="section-head">
+          <div class="section-title">
+            <span class="overline orange">La carta</span>
+            <h2 class="h2">Antojos para compartir</h2>
+            <p class="body-lg muted">Pizzas, entradas, postres y bebidas. Precios en pesos colombianos.</p>
+          </div>
+          <div class="tabs" role="tablist" aria-label="Filtrar por categoría" id="cat-tabs">
+            <button class="tab" role="tab" aria-selected="true" data-cat="todo">Todo</button>
+            <button class="tab" role="tab" aria-selected="false" data-cat="pizzas">Pizzas</button>
+            <button class="tab" role="tab" aria-selected="false" data-cat="entradas">Entradas</button>
+            <button class="tab" role="tab" aria-selected="false" data-cat="postres">Postres</button>
+            <button class="tab" role="tab" aria-selected="false" data-cat="bebidas">Bebidas</button>
+          </div>
+        </div>
+        <div class="grid-4" id="carta-grid" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- Banda de reserva -->
+    <section class="section" style="padding-top:0">
+      <div class="container">
+        <div class="banda">
+          <div class="banda-copy">
+            <span class="overline orange">Reserva en línea</span>
+            <h2 class="h2">Tu próxima pizza sabe mejor con una mesa reservada</h2>
+            <p class="body-lg" style="color:rgba(255,255,255,.72)">Elige mesa, fecha y hora en menos de 3 pasos. Sin llamadas, sin filas.</p>
+            <a href="#mesas" class="btn btn-primary btn-lg">Reserva ahora<i data-icon="arrowr" data-size="18"></i></a>
+          </div>
+          <div class="banda-art"><i data-cone="200"></i></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===================== Vista: Reserva confirmada (RF-06) ===================== -->
+  <main id="vista-confirmacion" class="confirm-page" hidden aria-live="polite"></main>
+
+  <!-- ===================== Pie de página ===================== -->
+  <footer class="site-footer" id="contacto">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-col">
+          <span class="brand"><i data-cone="46"></i><span class="brand-name"><b>KONYS</b><small>PIZZA</small></span></span>
+          <p class="body-sm">La pizza más icónica de la ciudad. Domicilios y eventos por WhatsApp.</p>
+          <div class="socials">
+            <a href="https://www.instagram.com/konys_pizza/" target="_blank" rel="noopener" aria-label="Instagram"><i data-icon="instagram" data-size="18"></i></a>
+            <a href="#contacto" aria-label="Facebook"><i data-icon="facebook" data-size="18"></i></a>
+            <a href="#contacto" aria-label="WhatsApp"><i data-icon="whatsapp" data-size="18"></i></a>
+          </div>
+        </div>
+        <div class="footer-col">
+          <h3 class="h5">Visítanos</h3>
+          <div class="footer-item"><i data-icon="pin" data-size="18"></i><span>Cra. 36 con calle 41<br>Bucaramanga, Santander</span></div>
+        </div>
+        <div class="footer-col">
+          <h3 class="h5">Horarios</h3>
+          <div class="footer-item"><i data-icon="clock" data-size="18"></i><span id="footer-horario">Mar – Dom<br>12:30 – 2:30 p. m.<br>5:00 – 11:00 p. m.</span></div>
+          <div class="footer-item" id="footer-cerrado"><i data-icon="x" data-size="18"></i><span>Lunes: cerrado</span></div>
+        </div>
+        <div class="footer-col">
+          <h3 class="h5">Contacto</h3>
+          <div class="footer-item"><i data-icon="whatsapp" data-size="18"></i><span>+57 300 000 0000<br><small style="opacity:.7">(número de ejemplo)</small></span></div>
+          <div class="footer-item"><i data-icon="instagram" data-size="18"></i><span>@konys_pizza</span></div>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 Konys Pizza · Sistema de reservas</span>
+        <div><span>Proyecto académico</span><span>Universidad de Santander</span></div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ===================== Modal de reserva (RF-02 a RF-05) ===================== -->
+  <div class="overlay overlay-sheet" id="reserva-modal" hidden role="dialog" aria-modal="true" aria-labelledby="reserva-title">
+    <div class="modal reserve" id="reserva-box"></div>
+  </div>
+
+  <!-- Configuración y scripts (orden: config → SDK → ui → datos → lógica) -->
+  <script src="js/config.js" onerror="window.KONYS_CONFIG = window.KONYS_CONFIG || {}"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/supabase.js"></script>
+  <script src="js/cliente.js"></script>
+</body>
+</html>

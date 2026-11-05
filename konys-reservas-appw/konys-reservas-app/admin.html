@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Konys Admin · Panel de administración</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#641C23">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M12 26 L52 26 L34 60.5 Q32 63.5 30 60.5 Z' fill='%23F2A541'/%3E%3Cellipse cx='32' cy='24' rx='21' ry='10' fill='%23FFCB52'/%3E%3Ccircle cx='22' cy='22' r='4' fill='%23D6402A'/%3E%3Ccircle cx='34' cy='19' r='4' fill='%23D6402A'/%3E%3Ccircle cx='44' cy='24' r='3.5' fill='%23D6402A'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="admin-body">
+
+  <!-- ===================== Acceso (RF-08 · Figma 7.1 / 7.2) ===================== -->
+  <section class="login" id="login" hidden>
+    <aside class="login-side">
+      <span class="brand white"><i data-cone="46"></i><span class="brand-name"><b>KONYS</b><small>PIZZA</small></span></span>
+      <div style="display:flex;flex-direction:column;gap:28px">
+        <div class="login-pics" id="login-pics"></div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <h1 class="h2" style="font-size:36px;line-height:44px">Gestiona tu restaurante<br>desde un solo lugar</h1>
+          <p class="body-lg" style="color:rgba(255,255,255,.65);max-width:440px">Mesas, horarios, reservas y carta digital de Konys Pizza.</p>
+        </div>
+        <div class="chips-row" style="gap:10px"><span class="chip chip-dark">Mesas</span><span class="chip chip-dark">Horarios</span><span class="chip chip-dark">Reservas</span><span class="chip chip-dark">Carta</span></div>
+      </div>
+      <span class="caption" style="color:rgba(255,255,255,.4)">© 2026 Konys Pizza · Uso exclusivo del administrador</span>
+    </aside>
+    <div class="login-main">
+      <form class="login-card" id="login-form" novalidate>
+        <div class="center">
+          <span class="logo-box"><i data-cone="54"></i></span>
+          <div><h2 class="h3">Panel de administración</h2><p class="body-sm muted">Ingresa la contraseña para continuar</p></div>
+        </div>
+        <div id="login-alert"></div>
+        <div class="field" id="f-pass">
+          <label class="field-label" for="i-pass">Contraseña</label>
+          <div class="input"><i data-icon="lock" data-size="18"></i><input id="i-pass" type="password" autocomplete="current-password" placeholder="••••••••" autofocus><button type="button" id="toggle-pass" aria-label="Mostrar contraseña" style="display:flex;color:var(--gray-400)"><i data-icon="eye" data-size="18"></i></button></div>
+          <div class="helper is-error" hidden></div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-lg btn-block">Ingresar<i data-icon="arrowr" data-size="18"></i></button>
+        <div class="divider"></div>
+        <div class="login-foot"><a href="index.html"><i data-icon="arrowl" data-size="16"></i>Volver a la página principal</a><span class="caption muted" style="display:inline-flex;gap:6px;align-items:center"><i data-icon="shield" data-size="14"></i>/admin</span></div>
+      </form>
+    </div>
+  </section>
+
+  <!-- ===================== Panel (Figma 8.x) ===================== -->
+  <div class="shell" id="shell" hidden>
+    <aside class="sidebar" id="sidebar">
+      <div>
+        <span class="brand" style="padding:0 6px"><i data-cone="40"></i><span class="brand-name"><b>KONYS</b><small>ADMIN</small></span></span>
+        <nav class="side-nav" aria-label="Secciones del panel">
+          <span class="overline">Gestión</span>
+          <a class="side-item" href="#resumen" data-sec="resumen"><i data-icon="grid"></i>Resumen</a>
+          <a class="side-item" href="#reservas" data-sec="reservas"><i data-icon="calcheck"></i>Reservas<span class="badge" id="badge-res" hidden></span></a>
+          <a class="side-item" href="#mesas" data-sec="mesas"><i data-icon="table"></i>Mesas</a>
+          <a class="side-item" href="#horarios" data-sec="horarios"><i data-icon="clock"></i>Horarios</a>
+          <a class="side-item" href="#carta" data-sec="carta"><i data-icon="utensils"></i>Carta</a>
+        </nav>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="side-user"><span class="avatar" style="background:var(--orange);color:#fff">AD</span><div style="display:flex;flex-direction:column"><b class="label">Administrador</b><span class="caption" style="color:rgba(255,255,255,.5)">Konys Pizza</span></div></div>
+        <button class="btn btn-ghost-light btn-block" id="logout" style="height:44px"><i data-icon="logout" data-size="16"></i>Cerrar sesión</button>
+      </div>
+    </aside>
+    <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+    <div class="main">
+      <header class="topbar">
+        <div style="display:flex;align-items:center;gap:12px">
+          <button class="btn btn-soft btn-icon admin-menu-btn" id="admin-menu" aria-label="Abrir menú"><i data-icon="menu"></i></button>
+          <div class="crumbs">Panel <i data-icon="cr" data-size="14"></i> <b id="crumb">Resumen</b></div>
+        </div>
+        <div class="topbar-right">
+          <span class="topbar-date" id="today"><i data-icon="calendar" data-size="16"></i></span>
+          <span class="vline" style="background:var(--gray-200)"></span>
+          <a href="index.html" target="_blank" class="btn btn-ghost btn-sm ver-sitio"><span>Ver sitio</span><i data-icon="external" data-size="16"></i></a>
+        </div>
+      </header>
+      <main class="content" id="content" aria-live="polite"></main>
+    </div>
+  </div>
+
+  <!-- Modal genérico del panel -->
+  <div class="overlay" id="admin-modal" hidden role="dialog" aria-modal="true"><div class="modal" id="admin-modal-box"></div></div>
+
+  <script src="js/config.js" onerror="window.KONYS_CONFIG = window.KONYS_CONFIG || {}"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/supabase.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>
