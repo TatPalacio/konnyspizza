@@ -13,7 +13,11 @@
 (function () {
   'use strict';
   const CFG = window.KONYS_CONFIG || {};
-  const hasSupabase = !!(CFG.SUPABASE_URL && CFG.SUPABASE_ANON_KEY && window.supabase && window.supabase.createClient);
+  const sdkListo = !!(window.supabase && window.supabase.createClient);
+  if (CFG.SUPABASE_URL && CFG.SUPABASE_ANON_KEY && !sdkListo) {
+    console.warn('Konys: config.js tiene URL y clave, pero el SDK de Supabase no cargó. Se usa modo demo.');
+  }
+  const hasSupabase = !!(CFG.SUPABASE_URL && CFG.SUPABASE_ANON_KEY && sdkListo);
   const sb = hasSupabase ? window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY) : null;
   const { isoDate, toMin, fromMin, hhmm, parseDate, DIAS } = window.KUI;
 

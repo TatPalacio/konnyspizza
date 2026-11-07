@@ -280,7 +280,22 @@
     renderCalendar(); renderDays(); renderSteps(); renderPersonasHelp(); renderSummary(); renderTop();
   }
 
-  const duracion = () => { const h = state.horarios.find(x => x.activo); return h ? Number(h.duracion_slot) : 60; };
+  /** Duración del día (y jornada) elegidos. No usa el primer horario activo del restaurante: cada día puede durar distinto. */
+  function duracion() {
+    const r = state.r;
+    if (r && r.fecha) {
+      const dia = U.DIAS[U.parseDate(r.fecha).getDay()];
+      const delDia = state.horarios.filter(h => h.dia_semana === dia && h.activo);
+      if (r.hora) {
+        const ini = U.toMin(r.hora);
+        const jornada = delDia.find(h => ini >= U.toMin(h.hora_inicio) && ini < U.toMin(h.hora_fin));
+        if (jornada) return Number(jornada.duracion_slot) || 60;
+      }
+      if (delDia.length) return Number(delDia[0].duracion_slot) || 60;
+    }
+    const cualquiera = state.horarios.find(h => h.activo);
+    return cualquiera ? Number(cualquiera.duracion_slot) || 60 : 60;
+  }
   const formatTel = (t) => { t = String(t || ''); return t.length > 6 ? `${t.slice(0, 3)} ${t.slice(3, 6)} ${t.slice(6)}` : t.length > 3 ? `${t.slice(0, 3)} ${t.slice(3)}` : t; };
 
   /* ----- Paso 1: fecha (calendario en escritorio, tira de días en móvil) ----- */
@@ -484,6 +499,9 @@
   /* ---------------------------------------------------------------- */
   function showConfirmacion(res, mesa) {
     const fin = res.hora_fin ? U.hhmm(res.hora_fin) : U.fromMin(U.toMin(res.hora_inicio) + duracion());
+    const minutos = res.hora_inicio && res.hora_fin && U.toMin(res.hora_fin) > U.toMin(res.hora_inicio)
+      ? U.toMin(res.hora_fin) - U.toMin(res.hora_inicio)
+      : duracion();
     const det = [['user', 'Cliente', res.cliente_nombre], ['table', 'Mesa', mesa.nombre], [U.zonaIcon(mesa.zona), 'Zona', U.zonaTxt(mesa.zona)], ['users', 'Personas', `${res.num_personas} ${res.num_personas === 1 ? 'persona' : 'personas'}`], ['calendar', 'Fecha', U.fechaLarga(res.fecha)], ['clock', 'Hora', `${U.hhmm(res.hora_inicio)} – ${fin}`]];
     const nombre = esc(String(res.cliente_nombre).trim().split(/\s+/)[0]);
     const v = $('#vista-confirmacion');
@@ -492,7 +510,7 @@
       <div class="card confirm-card">
         <div class="code-box"><div><small>Código de reserva</small><b>${U.codigoReserva(res)}</b></div>${chip('confirmada')}</div>
         <div class="detail-grid">${det.map(([i, k, val]) => `<div class="detail"><span class="ic">${icon(i, 18)}</span><div><span class="caption muted">${k}</span><b>${esc(val)}</b></div></div>`).join('')}</div>
-        <div class="alert alert-info">${icon('info', 20)}<div><b>Tu mesa queda apartada por ${duracion()} minutos</b>Si necesitas cambiar o cancelar, escríbenos por WhatsApp al +57 300 000 0000 (número de ejemplo).</div></div>
+        <div class="alert alert-info">${icon('info', 20)}<div><b>Tu mesa queda apartada por ${minutos} minutos</b>Si necesitas cambiar o cancelar, escríbenos por WhatsApp al +57 300 000 0000 (número de ejemplo).</div></div>
         <div class="confirm-actions"><button class="btn btn-soft" id="c-print">${icon('printer', 18)}Guardar comprobante</button><button class="btn btn-primary" id="c-home">${icon('home', 18)}Volver al inicio</button></div>
       </div></div>`;
     $('#vista-inicio').hidden = true; v.hidden = false;

@@ -1,0 +1,12 @@
+# Esta carpeta es la raíz del repositorio.
+# No ignorar js/config.js: el sitio estático lo necesita para abrirse sin build.
+.env
+.env.local
+.env.*.local
+
+.vercel
+node_modules
+
+.DS_Store
+Thumbs.db
+desktop.ini
