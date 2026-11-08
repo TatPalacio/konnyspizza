@@ -3,6 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://cdn.jsdelivr.net https://fonts.googleapis.com https://fonts.gstatic.com https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:">
   <title>Konys Pizza · Reserva tu mesa</title>
   <meta name="description" content="Konys Pizza, la pizza más icónica de Bucaramanga. Consulta la disponibilidad de mesas y reserva en línea.">
   <meta name="theme-color" content="#641C23">
@@ -13,6 +15,7 @@
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
+  <noscript><p class="alert alert-error" data-testid="sin-js" style="margin:16px">Activa JavaScript para consultar mesas y reservar.</p></noscript>
 
   <!-- ===================== Encabezado (fijo) ===================== -->
   <header class="site-header" id="site-header">
@@ -32,7 +35,7 @@
         <a class="domicilios" href="#contacto"><i data-icon="whatsapp" data-size="18"></i>Domicilios</a>
         <span class="vline"></span>
         <a href="admin.html" class="btn btn-ghost-light btn-sm btn-admin"><i data-icon="lock" data-size="16"></i>Admin</a>
-        <button class="btn btn-ghost-light btn-icon menu-btn" id="menu-open" aria-label="Abrir menú"><i data-icon="menu"></i></button>
+        <button class="btn btn-ghost-light btn-icon menu-btn" id="menu-open" data-testid="menu-abrir" aria-label="Abrir menú" aria-controls="mobile-menu" aria-expanded="false"><i data-icon="menu"></i></button>
       </div>
     </div>
   </header>
@@ -41,7 +44,7 @@
   <div class="mobile-menu" id="mobile-menu" hidden>
     <div class="header-row">
       <span class="brand"><i data-cone="36"></i><span class="brand-name"><b>KONYS</b><small>PIZZA</small></span></span>
-      <button class="btn btn-ghost-light btn-icon" id="menu-close" aria-label="Cerrar menú"><i data-icon="x"></i></button>
+      <button class="btn btn-ghost-light btn-icon" id="menu-close" data-testid="menu-cerrar" aria-label="Cerrar menú"><i data-icon="x"></i></button>
     </div>
     <nav aria-label="Menú móvil">
       <a href="#inicio" class="active"><span><i data-icon="home" data-size="22"></i>Inicio</span><i data-icon="cr" data-size="18"></i></a>
@@ -99,14 +102,14 @@
           </div>
           <div class="section-tools">
             <div class="tabs" role="tablist" aria-label="Filtrar por zona" id="zona-tabs">
-              <button class="tab" role="tab" aria-selected="true" data-zona="todas">Todas</button>
-              <button class="tab" role="tab" aria-selected="false" data-zona="terraza">Terraza</button>
-              <button class="tab" role="tab" aria-selected="false" data-zona="salon">Salón</button>
+              <button class="tab" role="tab" aria-selected="true" data-zona="todas" data-testid="zona-todas">Todas</button>
+              <button class="tab" role="tab" aria-selected="false" data-zona="terraza" data-testid="zona-terraza">Terraza</button>
+              <button class="tab" role="tab" aria-selected="false" data-zona="salon" data-testid="zona-salon">Salón</button>
             </div>
             <div class="legend-row"><span class="chip chip-libre"><span class="dot"></span>Libre</span><span class="chip chip-ocupada"><span class="dot"></span>Ocupada</span></div>
           </div>
         </div>
-        <div class="grid-4" id="mesas-grid" aria-live="polite"></div>
+        <div class="grid-4" id="mesas-grid" data-testid="mesas-list" aria-live="polite"></div>
       </div>
     </section>
 
@@ -120,14 +123,14 @@
             <p class="body-lg muted">Pizzas, entradas, postres y bebidas. Precios en pesos colombianos.</p>
           </div>
           <div class="tabs" role="tablist" aria-label="Filtrar por categoría" id="cat-tabs">
-            <button class="tab" role="tab" aria-selected="true" data-cat="todo">Todo</button>
-            <button class="tab" role="tab" aria-selected="false" data-cat="pizzas">Pizzas</button>
-            <button class="tab" role="tab" aria-selected="false" data-cat="entradas">Entradas</button>
-            <button class="tab" role="tab" aria-selected="false" data-cat="postres">Postres</button>
-            <button class="tab" role="tab" aria-selected="false" data-cat="bebidas">Bebidas</button>
+            <button class="tab" role="tab" aria-selected="true" data-cat="todo" data-testid="cat-todo">Todo</button>
+            <button class="tab" role="tab" aria-selected="false" data-cat="pizzas" data-testid="cat-pizzas">Pizzas</button>
+            <button class="tab" role="tab" aria-selected="false" data-cat="entradas" data-testid="cat-entradas">Entradas</button>
+            <button class="tab" role="tab" aria-selected="false" data-cat="postres" data-testid="cat-postres">Postres</button>
+            <button class="tab" role="tab" aria-selected="false" data-cat="bebidas" data-testid="cat-bebidas">Bebidas</button>
           </div>
         </div>
-        <div class="grid-4" id="carta-grid" aria-live="polite"></div>
+        <div class="grid-4" id="carta-grid" data-testid="carta-list" aria-live="polite"></div>
       </div>
     </section>
 
@@ -148,7 +151,7 @@
   </main>
 
   <!-- ===================== Vista: Reserva confirmada (RF-06) ===================== -->
-  <main id="vista-confirmacion" class="confirm-page" hidden aria-live="polite"></main>
+  <main id="vista-confirmacion" class="confirm-page" data-testid="reserva-confirmada" hidden aria-live="polite"></main>
 
   <!-- ===================== Pie de página ===================== -->
   <footer class="site-footer" id="contacto">
@@ -186,7 +189,7 @@
   </footer>
 
   <!-- ===================== Modal de reserva (RF-02 a RF-05) ===================== -->
-  <div class="overlay overlay-sheet" id="reserva-modal" hidden role="dialog" aria-modal="true" aria-labelledby="reserva-title">
+  <div class="overlay overlay-sheet" id="reserva-modal" data-testid="reserva-modal" hidden role="dialog" aria-modal="true" aria-labelledby="reserva-title">
     <div class="modal reserve" id="reserva-box"></div>
   </div>
 
@@ -194,6 +197,7 @@
   <script src="js/config.js" onerror="window.KONYS_CONFIG = window.KONYS_CONFIG || {}"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
   <script src="js/ui.js"></script>
+  <script src="js/validacion.js"></script>
   <script src="js/supabase.js"></script>
   <script src="js/cliente.js"></script>
 </body>

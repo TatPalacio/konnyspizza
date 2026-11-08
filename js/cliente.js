@@ -22,27 +22,42 @@
   /* ---------------------------------------------------------------- */
   /* Inicio                                                             */
   /* ---------------------------------------------------------------- */
+  let uiLista = false;
   document.addEventListener('DOMContentLoaded', init);
 
   async function init() {
-    U.hydrateIcons();
-    $('#hero-art').insertAdjacentHTML('afterbegin', U.heroArt());
-    bindHeader();
-    bindTabs();
+    if (!uiLista) {
+      U.hydrateIcons();
+      $('#hero-art').insertAdjacentHTML('afterbegin', U.heroArt());
+      bindHeader();
+      bindTabs();
+      if (DB.mode === 'demo') demoBadge();
+      uiLista = true;
+    }
     skeletons();
-    if (DB.mode === 'demo') demoBadge();
     try {
-      const hoy = U.isoDate(new Date());
-      const [mesas, horarios, platos, reservasHoy] = await Promise.all([
-        DB.listMesas({ soloActivas: true }), DB.listHorarios(), DB.listPlatos({ soloDisponibles: true }), DB.listOcupacion({ fecha: hoy }),
-      ]);
-      Object.assign(state, { mesas, horarios, platos, reservasHoy });
+      await cargarDatos();
       renderMesas(); renderCarta(); renderFooterHorario();
     } catch (err) {
       console.error(err);
-      const msg = `<div class="alert alert-error" style="grid-column:1/-1">${icon('alertc', 20)}<div><b>No pudimos cargar la información</b>Revisa tu conexión e inténtalo de nuevo.</div></div>`;
-      $('#mesas-grid').innerHTML = msg; $('#carta-grid').innerHTML = msg;
+      pintarErrorCarga();
     }
+  }
+
+  async function cargarDatos() {
+    const hoy = U.isoDate(new Date());
+    const [mesas, horarios, platos, reservasHoy] = await Promise.all([
+      DB.listMesas({ soloActivas: true }), DB.listHorarios(), DB.listPlatos({ soloDisponibles: true }), DB.listOcupacion({ fecha: hoy }),
+    ]);
+    Object.assign(state, { mesas, horarios, platos, reservasHoy });
+  }
+
+  function pintarErrorCarga() {
+    const caja = (boton) => `<div class="alert alert-error" role="alert" data-testid="${boton ? 'carga-error' : 'carta-carga-error'}" style="grid-column:1/-1">${icon('alertc', 20)}<div><b>No pudimos cargar la información</b>Revisa tu conexión e inténtalo de nuevo.${boton ? `<div class="alert-actions"><button type="button" class="btn btn-soft btn-sm" data-testid="carga-reintentar">Reintentar</button></div>` : ''}</div></div>`;
+    $('#mesas-grid').innerHTML = caja(true);
+    $('#carta-grid').innerHTML = caja(false);
+    const retry = $('#mesas-grid [data-testid="carga-reintentar"]');
+    if (retry) retry.onclick = () => init();
   }
 
   function skeletons() {
@@ -53,7 +68,7 @@
   function demoBadge() {
     const b = document.createElement('div');
     b.className = 'demo-badge';
-    b.innerHTML = `${icon('database', 14)}Modo demo · datos guardados en este navegador <button type="button">Restablecer</button>`;
+    b.innerHTML = `${icon('database', 14)}Modo demo · datos guardados en este navegador <button type="button" data-testid="demo-restablecer">Restablecer</button>`;
     b.querySelector('button').onclick = async () => { await DB.reset(); location.reload(); };
     document.body.appendChild(b);
   }
@@ -67,8 +82,9 @@
     window.addEventListener('scroll', onScroll, { passive: true }); onScroll();
 
     const menu = $('#mobile-menu');
-    $('#menu-open').onclick = () => { menu.hidden = false; document.body.classList.add('no-scroll'); };
-    const closeMenu = () => { menu.hidden = true; document.body.classList.remove('no-scroll'); };
+    const abrir = $('#menu-open');
+    abrir.onclick = () => { menu.hidden = false; document.body.classList.add('no-scroll'); abrir.setAttribute('aria-expanded', 'true'); };
+    const closeMenu = () => { menu.hidden = true; document.body.classList.remove('no-scroll'); abrir.setAttribute('aria-expanded', 'false'); };
     $('#menu-close').onclick = closeMenu;
     $$('a', menu).forEach(a => a.addEventListener('click', closeMenu));
 
@@ -111,24 +127,24 @@
     const list = state.mesas.filter(m => state.zona === 'todas' || m.zona === state.zona);
     const grid = $('#mesas-grid');
     if (!list.length) {
-      grid.innerHTML = `<div class="empty" style="grid-column:1/-1">${U.emptyArt()}
+      grid.innerHTML = `<div class="empty" data-testid="mesas-empty" style="grid-column:1/-1">${U.emptyArt()}
         <h3 class="h3">No hay mesas disponibles${state.zona !== 'todas' ? ' en ' + (state.zona === 'terraza' ? 'la terraza' : 'el salón') : ''}</h3>
         <p class="body-lg muted">${state.mesas.length ? 'Prueba con otra zona del restaurante.' : 'En este momento no hay mesas habilitadas para reservas. Escríbenos por WhatsApp para más información.'}</p>
-        ${state.mesas.length ? `<button class="btn btn-primary" data-zona-reset>${icon('table', 18)}Ver todas las mesas</button>` : ''}</div>`;
+        ${state.mesas.length ? `<button class="btn btn-primary" data-testid="mesas-ver-todas" data-zona-reset>${icon('table', 18)}Ver todas las mesas</button>` : ''}</div>`;
       const reset = grid.querySelector('[data-zona-reset]');
       if (reset) reset.onclick = () => $('#zona-tabs [data-zona="todas"]').click();
       return;
     }
     grid.innerHTML = list.map(m => {
       const est = estadoMesa(m);
-      return `<article class="card mesa-card">
+      return `<article class="card mesa-card" data-testid="mesa-card" data-mesa-id="${m.id}">
         ${U.mesaImg(m)}<span class="status">${chip(est)}</span>
         <div class="mesa-body">
           <div class="title-row"><h3 class="h4">${esc(m.nombre)}</h3><span class="chip-m">${chip(est)}</span></div>
           <div class="meta"><span>${icon(U.zonaIcon(m.zona), 16)}${U.zonaTxt(m.zona)}</span><span>${icon('users', 16)}${m.capacidad} personas</span></div>
           ${est === 'libre'
-            ? `<button class="btn btn-primary btn-block" data-reservar="${m.id}">Reservar${icon('arrowr', 18)}</button>`
-            : `<button class="btn btn-secondary btn-block" data-reservar="${m.id}">${icon('clock', 18)}Ver horarios</button>`}
+            ? `<button class="btn btn-primary btn-block" data-testid="mesa-reservar" data-reservar="${m.id}">Reservar${icon('arrowr', 18)}</button>`
+            : `<button class="btn btn-secondary btn-block" data-testid="mesa-horarios" data-reservar="${m.id}">${icon('clock', 18)}Ver horarios</button>`}
         </div></article>`;
     }).join('');
     $$('[data-reservar]', grid).forEach(b => b.onclick = () => openReserva(Number(b.dataset.reservar)));
@@ -139,14 +155,14 @@
   /* ---------------------------------------------------------------- */
   function renderCarta() {
     const list = state.platos.filter(p => state.cat === 'todo' || p.categoria === state.cat);
-    $('#carta-grid').innerHTML = list.length ? list.map((p, i) => `<article class="card plato-card">
+    $('#carta-grid').innerHTML = list.length ? list.map((p, i) => `<article class="card plato-card" data-testid="carta-card" data-plato-id="${p.id}">
       ${U.platoImg(p)}
       <div class="plato-body">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span class="tag">${U.CATS[p.categoria] || esc(p.categoria)}</span>${i === 0 && state.cat === 'todo' ? '<span class="tag tag-accent">Favorita</span>' : ''}</div>
         <div><h3 class="h4" style="font-size:18px">${esc(p.nombre)}</h3><p class="body-sm muted desc">${esc(p.descripcion)}</p></div>
         <div class="plato-price"><b>${U.cop(p.precio)}</b><span class="caption muted">COP</span></div>
       </div></article>`).join('')
-      : `<div class="empty" style="grid-column:1/-1">${icon('utensils', 40, U.C.gray400)}<h3 class="h4">Sin platos disponibles en esta categoría</h3></div>`;
+      : `<div class="empty" data-testid="carta-empty" style="grid-column:1/-1">${icon('utensils', 40, U.C.gray400)}<h3 class="h4">Sin platos disponibles en esta categoría</h3></div>`;
   }
 
   function renderFooterHorario() {
@@ -217,7 +233,7 @@
         </div>
         <button class="btn btn-soft btn-icon close" data-close aria-label="Cerrar">${icon('x', 18)}</button>
       </div>
-      <div class="reserve-top-alert" id="r-top" hidden></div>
+      <div class="reserve-top-alert" id="r-top" data-testid="reserva-horario-ocupado" hidden></div>
       <div class="reserve-grid">
         <div class="reserve-col col-fecha">
           <div class="soft reserve-mesa" style="display:none;align-items:center;gap:14px;padding:12px">
@@ -236,33 +252,33 @@
           <div class="divider"></div>
           <div class="legend"><span><i></i>Disponible</span><span><i class="oc"></i>Ocupado</span><span><i class="sel"></i>Seleccionado</span><span><i class="dis"></i>No disponible</span></div>
         </div>
-        <form class="reserve-col col-datos" id="r-form" novalidate>
+        <form class="reserve-col col-datos" id="r-form" data-testid="reserva-form" novalidate>
           <div class="step" id="st-3"></div>
-          <div id="r-form-alert"></div>
+          <div id="r-form-alert" data-testid="reserva-error"></div>
           <div class="datos-inner">
             <div class="field" id="f-nombre">
               <label class="field-label" for="i-nombre">Nombre completo<span class="req">*</span></label>
-              <div class="input">${icon('user', 18)}<input id="i-nombre" name="nombre" autocomplete="name" placeholder="Ej. Juan Pérez" maxlength="80"></div>
-              <div class="helper" hidden></div>
+              <div class="input">${icon('user', 18)}<input id="i-nombre" data-testid="reserva-nombre" name="nombre" autocomplete="name" placeholder="Ej. Juan Pérez" maxlength="80" required aria-describedby="h-nombre" aria-invalid="false"></div>
+              <div class="helper" id="h-nombre" data-testid="error-nombre" hidden></div>
             </div>
             <div class="field" id="f-tel">
               <label class="field-label" for="i-tel">Teléfono / WhatsApp<span class="opt">(opcional)</span></label>
-              <div class="input">${icon('phone', 18)}<input id="i-tel" name="tel" type="tel" inputmode="numeric" autocomplete="tel" placeholder="300 000 0000" maxlength="14"></div>
-              <div class="helper" hidden></div>
+              <div class="input">${icon('phone', 18)}<input id="i-tel" data-testid="reserva-tel" name="tel" type="tel" inputmode="numeric" autocomplete="tel" placeholder="300 000 0000" maxlength="14" aria-describedby="h-tel" aria-invalid="false"></div>
+              <div class="helper" id="h-tel" data-testid="error-tel" hidden></div>
             </div>
             <div class="field" id="f-personas">
               <label class="field-label" for="i-personas">Número de personas<span class="req">*</span></label>
               <div class="input stepper">
-                <button type="button" class="btn btn-icon btn-sm" data-step="-1" aria-label="Quitar una persona">${icon('minus', 16)}</button>
-                <span class="value">${icon('users', 16, U.C.gray400)}<input id="i-personas" type="number" min="1" max="20" inputmode="numeric" placeholder="0" aria-describedby="h-personas"> personas</span>
-                <button type="button" class="btn btn-icon btn-sm" data-step="1" aria-label="Agregar una persona">${icon('plus', 16)}</button>
+                <button type="button" class="btn btn-icon btn-sm" data-step="-1" data-testid="reserva-personas-menos" aria-label="Quitar una persona">${icon('minus', 16)}</button>
+                <span class="value">${icon('users', 16, U.C.gray400)}<input id="i-personas" data-testid="reserva-personas" type="number" min="1" max="12" inputmode="numeric" placeholder="0" required aria-describedby="h-personas" aria-invalid="false"> personas</span>
+                <button type="button" class="btn btn-icon btn-sm" data-step="1" data-testid="reserva-personas-mas" aria-label="Agregar una persona">${icon('plus', 16)}</button>
               </div>
-              <div class="helper" id="h-personas"></div>
+              <div class="helper" id="h-personas" data-testid="error-personas"></div>
               <div id="cap-alert"></div>
             </div>
           </div>
-          <div class="soft summary" id="r-summary"></div>
-          <div class="reserve-submit"><button type="submit" class="btn btn-primary btn-lg btn-block" id="r-submit">${icon('check', 18)}Confirmar reserva</button></div>
+          <div class="soft summary" id="r-summary" data-testid="reserva-resumen"></div>
+          <div class="reserve-submit"><button type="submit" class="btn btn-primary btn-lg btn-block" id="r-submit" data-testid="reserva-confirmar">${icon('check', 18)}Confirmar reserva</button></div>
           <p class="caption muted reserve-note">Sin registro ni pagos. Tu mesa queda apartada al confirmar.</p>
         </form>
       </div>`;
@@ -313,11 +329,11 @@
       if (otro) { cells += `<span class="day is-muted" aria-hidden="true">${d.getDate()}</span>`; continue; }
       const pasado = f < hoy, cerrado = !U.diaAbierto(f, state.horarios);
       const cls = ['day', f === state.r.fecha ? 'is-sel' : '', f === hoy && f !== state.r.fecha ? 'is-today' : '', cerrado && !pasado ? 'is-closed' : ''].join(' ');
-      cells += `<button type="button" class="${cls}" data-fecha="${f}" ${pasado || cerrado ? 'disabled' : ''} aria-label="${U.fechaLarga(f)}${cerrado ? ', cerrado' : ''}" aria-pressed="${f === state.r.fecha}">${d.getDate()}</button>`;
+      cells += `<button type="button" class="${cls}" data-testid="reserva-dia" data-fecha="${f}" ${pasado || cerrado ? 'disabled' : ''} aria-label="${U.fechaLarga(f)}${cerrado ? ', cerrado' : ''}" aria-pressed="${f === state.r.fecha}">${d.getDate()}</button>`;
     }
     $('#r-cal').innerHTML = `<div class="cal">
       <div class="cal-head"><b class="h5">${U.MESES[mo][0].toUpperCase() + U.MESES[mo].slice(1)} ${y}</b>
-        <div style="display:flex;gap:6px"><button type="button" class="btn btn-soft btn-icon btn-sm" data-mes="-1" ${puedeAtras ? '' : 'disabled'} aria-label="Mes anterior">${icon('cl', 16)}</button><button type="button" class="btn btn-soft btn-icon btn-sm" data-mes="1" aria-label="Mes siguiente">${icon('cr', 16)}</button></div></div>
+        <div style="display:flex;gap:6px"><button type="button" class="btn btn-soft btn-icon btn-sm" data-testid="reserva-mes-anterior" data-mes="-1" ${puedeAtras ? '' : 'disabled'} aria-label="Mes anterior">${icon('cl', 16)}</button><button type="button" class="btn btn-soft btn-icon btn-sm" data-testid="reserva-mes-siguiente" data-mes="1" aria-label="Mes siguiente">${icon('cr', 16)}</button></div></div>
       <div class="cal-grid">${['L', 'M', 'M', 'J', 'V', 'S', 'D'].map(d => `<span class="cal-wk">${d}</span>`).join('')}${cells}</div>
       <div class="cal-legend"><span><i style="width:10px;height:10px;border-radius:3px;background:var(--orange)"></i>Seleccionado</span><span><b style="color:var(--gray-300);text-decoration:line-through;font-weight:500">9</b>Cerrado</span></div></div>`;
     $$('[data-mes]', $('#r-cal')).forEach(b => b.onclick = () => { state.mes = new Date(y, mo + Number(b.dataset.mes), 1); renderCalendar(); });
@@ -327,7 +343,7 @@
     const d = new Date(); let html = '';
     for (let i = 0; i < 21; i++) {
       const f = U.isoDate(d), abierto = U.diaAbierto(f, state.horarios);
-      html += `<button type="button" data-fecha="${f}" class="${f === state.r.fecha ? 'is-sel' : ''}" ${abierto ? '' : 'disabled'} aria-label="${U.fechaLarga(f)}"><small>${U.DIAS_CORTOS[d.getDay()]}</small><b>${d.getDate()}</b></button>`;
+      html += `<button type="button" data-testid="reserva-dia" data-fecha="${f}" class="${f === state.r.fecha ? 'is-sel' : ''}" ${abierto ? '' : 'disabled'} aria-label="${U.fechaLarga(f)}"><small>${U.DIAS_CORTOS[d.getDay()]}</small><b>${d.getDate()}</b></button>`;
       d.setDate(d.getDate() + 1);
     }
     $('#r-days').innerHTML = html;
@@ -345,12 +361,12 @@
   function renderSlots() {
     const box = $('#r-slots'); if (!box) return;
     const msg = $('#r-slot-msg');
-    msg.innerHTML = state.errors.hora ? `<div class="helper is-error" style="padding:10px 12px;border-radius:10px;background:var(--red-50)">${icon('alertc', 14)}${state.errors.hora}</div>` : '';
+    msg.innerHTML = state.errors.hora ? `<div class="helper is-error" id="reserva-hora-error" data-testid="reserva-hora-error" tabindex="-1" role="alert" style="padding:10px 12px;border-radius:10px;background:var(--red-50)">${icon('alertc', 14)}${esc(state.errors.hora)}</div>` : '';
     if (state.jornadas === null) { box.innerHTML = '<div class="skeleton" style="height:240px"></div>'; return; }
     const libres = state.jornadas.flatMap(j => j.slots).filter(s => s.estado === 'av');
     if (!state.jornadas.length || !libres.length) {
       const alt = siguienteFechaConCupo();
-      box.innerHTML = `<div class="slots-empty">${U.emptyArt().replace('<svg', '<svg class="big"')}
+      box.innerHTML = `<div class="slots-empty" data-testid="reserva-sin-horarios">${U.emptyArt().replace('<svg', '<svg class="big"')}
         <b class="h5">No hay horarios disponibles para esta fecha</b>
         <span class="body-sm muted">${state.r.fecha ? 'Todos los horarios de esta mesa están ocupados o ya pasaron. Elige otra fecha u horario.' : 'El restaurante no tiene días habilitados por ahora.'}</span>
         ${alt ? `<button type="button" class="btn btn-secondary btn-sm" data-alt="${alt}">${icon('calendar', 16)}Ver ${U.fechaCorta(alt).replace(/ \d{4}$/, '')}</button>` : ''}</div>`;
@@ -364,7 +380,7 @@
         const err = state.topAlert && state.topAlert.hora === s.hora;
         const cls = err ? 'is-err' : sel ? 'is-sel' : s.estado === 'oc' ? 'is-oc' : s.estado === 'dis' ? 'is-dis' : '';
         const label = s.estado === 'oc' ? 'ocupado' : s.estado === 'dis' ? 'no disponible' : 'disponible';
-        return `<button type="button" class="slot ${cls}" data-hora="${s.hora}" ${s.estado !== 'av' ? 'disabled' : ''} aria-pressed="${sel}" aria-label="${s.hora}, ${label}">${s.hora}</button>`;
+        return `<button type="button" class="slot ${cls}" data-testid="reserva-slot" data-hora="${s.hora}" data-estado="${s.estado}" ${s.estado !== 'av' ? 'disabled' : ''} aria-pressed="${sel}" aria-label="${s.hora}, ${label}">${s.hora}</button>`;
       }).join('')}</div></div>`).join('');
     $$('[data-hora]', box).forEach(b => b.onclick = () => pickHora(b.dataset.hora));
   }
@@ -384,7 +400,7 @@
   /* ----- Paso 3: datos y validaciones (RF-05) ----- */
   function setPersonas(n, fromButton) {
     const r = state.r;
-    r.personas = Math.max(0, Math.min(20, n));
+    r.personas = Math.max(0, Math.min(12, n));
     if (fromButton) $('#i-personas').value = r.personas || '';
     clearErr('personas');
     if (r.personas > r.mesa.capacidad) validate(['personas']);
@@ -395,22 +411,23 @@
     const err = state.errors.personas;
     $('.input', f).classList.toggle('is-error', !!err);
     $('#h-personas').className = 'helper' + (err ? ' is-error' : '');
-    $('#h-personas').innerHTML = err ? `${icon('alertc', 14)}${err}` : `${icon('info', 14, U.C.gray400)}Máximo ${r.mesa.capacidad} personas en esta mesa`;
-    $('#cap-alert').innerHTML = r.personas > r.mesa.capacidad ? `<div class="alert alert-warning" style="margin-top:6px">${icon('alert', 20, '#D97706')}<div><b>¿Son más de ${r.mesa.capacidad}?</b>Corrige la cantidad o elige una mesa con mayor capacidad.
+    $('#h-personas').innerHTML = err ? `${icon('alertc', 14)}${esc(err)}` : `${icon('info', 14, U.C.gray400)}Máximo ${r.mesa.capacidad} personas en esta mesa`;
+    const personasInput = $('#i-personas');
+    if (personasInput) personasInput.setAttribute('aria-invalid', err ? 'true' : 'false');
+    $('#cap-alert').innerHTML = r.personas > r.mesa.capacidad ? `<div class="alert alert-warning" data-testid="reserva-capacidad" role="alert" style="margin-top:6px">${icon('alert', 20, '#D97706')}<div><b>¿Son más de ${r.mesa.capacidad}?</b>Corrige la cantidad o elige una mesa con mayor capacidad.
       <div class="alert-actions"><button type="button" class="btn btn-soft btn-sm" data-ajustar style="height:32px">Ajustar a ${r.mesa.capacidad}</button><button type="button" class="btn btn-ghost btn-sm" data-otra style="height:32px;color:var(--yellow-800)">Otra mesa${icon('arrowr', 16)}</button></div></div></div>` : '';
     const aj = $('[data-ajustar]'); if (aj) aj.onclick = () => setPersonas(r.mesa.capacidad, true);
     const ot = $('[data-otra]'); if (ot) ot.onclick = () => { closeReserva(); document.getElementById('mesas').scrollIntoView({ behavior: 'smooth' }); };
   }
 
-  const RULES = {
-    nombre: (r) => { const v = r.nombre.trim(); if (!v) return 'Ingresa tu nombre completo'; if (v.length < 3) return 'El nombre debe tener al menos 3 letras'; if (!/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ' .-]+$/.test(v)) return 'Usa solo letras y espacios'; return null; },
-    tel: (r) => (r.tel && !/^3\d{9}$/.test(r.tel) && !/^\d{10}$/.test(r.tel)) ? 'Ingresa un número válido de 10 dígitos' : null,
-    personas: (r) => !r.personas ? 'Indica cuántas personas asistirán' : r.personas > r.mesa.capacidad ? `La ${r.mesa.nombre} admite máximo ${r.mesa.capacidad} personas` : null,
-    hora: (r) => !r.hora ? 'Selecciona un horario para continuar' : null,
-  };
+  function camposReserva() {
+    const r = state.r;
+    return KVal.erroresReserva({ nombre: r.nombre, tel: r.tel, personas: r.personas, capacidad: r.mesa.capacidad, mesaNombre: r.mesa.nombre, hora: r.hora });
+  }
   function validate(keys) {
+    const all = camposReserva();
     let ok = true;
-    keys.forEach(k => { const e = RULES[k](state.r); if (e) { state.errors[k] = e; ok = false; } else delete state.errors[k]; paintErr(k); });
+    keys.forEach(k => { if (all[k]) { state.errors[k] = all[k]; ok = false; } else delete state.errors[k]; paintErr(k); });
     return ok;
   }
   function clearErr(k) { if (state.errors[k]) { delete state.errors[k]; paintErr(k); } }
@@ -421,13 +438,14 @@
     const e = state.errors[k], inp = $('.input', f), h = $('.helper', f);
     inp.classList.toggle('is-error', !!e);
     inp.classList.toggle('is-success', !e && k === 'tel' && /^\d{10}$/.test(state.r.tel || ''));
-    h.hidden = !e; h.className = 'helper' + (e ? ' is-error' : ''); h.innerHTML = e ? `${icon('alertc', 14)}${e}` : '';
+    h.hidden = !e; h.className = 'helper' + (e ? ' is-error' : ''); h.innerHTML = e ? `${icon('alertc', 14)}${esc(e)}` : '';
     $('input', f).setAttribute('aria-invalid', !!e);
   }
 
   function renderSteps() {
     const r = state.r; if (!$('#st-1')) return;
-    const datosOk = !RULES.nombre(r) && !RULES.tel(r) && !RULES.personas(r);
+    const campos = camposReserva();
+    const datosOk = !campos.nombre && !campos.tel && !campos.personas;
     const step = (n, st, t, sub) => `<span class="step-n">${st === 'done' ? icon('check', 16, '#fff', 3) : n}</span><span class="t"><b class="h5">${t}</b><span class="body-sm muted">${sub}</span></span>`;
     const set = (id, st, html) => { const el = $(id); el.className = 'step' + (st === 'done' ? ' is-done' : st === 'active' ? ' is-active' : ''); el.innerHTML = html; };
     set('#st-1', r.fecha ? 'done' : 'active', step(1, r.fecha ? 'done' : 'active', 'Elige la fecha', r.fecha ? U.fechaLarga(r.fecha) : 'Días con atención'));
@@ -454,7 +472,7 @@
     if (!a) { box.innerHTML = ''; return; }
     const cercanos = (state.jornadas || []).flatMap(j => j.slots).filter(s => s.estado === 'av')
       .sort((x, y) => Math.abs(U.toMin(x.hora) - U.toMin(a.hora)) - Math.abs(U.toMin(y.hora) - U.toMin(a.hora))).slice(0, 2).sort((x, y) => U.toMin(x.hora) - U.toMin(y.hora));
-    box.innerHTML = `<div class="alert alert-error" role="alert">${icon('alertc', 20)}<div style="flex:1"><b>Este horario ya no está disponible</b>Otra persona acaba de reservar la ${esc(state.r.mesa.nombre)} a las ${a.hora}. Tus datos se conservaron: solo elige otro horario para continuar.
+    box.innerHTML = `<div class="alert alert-error" role="alert" data-testid="reserva-error-ocupado">${icon('alertc', 20)}<div style="flex:1"><b>Este horario ya no está disponible</b>Otra persona acaba de reservar la ${esc(state.r.mesa.nombre)} a las ${esc(a.hora)}. Tus datos se conservaron: solo elige otro horario para continuar.
       ${cercanos.length ? `<div class="alert-actions"><span class="caption">Horarios cercanos:</span>${cercanos.map(s => `<button type="button" class="slot" style="height:36px;width:72px" data-near="${s.hora}">${s.hora}</button>`).join('')}</div>` : ''}</div>
       <button type="button" class="close" aria-label="Cerrar aviso">${icon('x', 18)}</button></div>`;
     $$('[data-near]', box).forEach(b => b.onclick = () => pickHora(b.dataset.near));
@@ -465,11 +483,11 @@
   async function submit() {
     if (state.saving) return;
     const ok = validate(['hora', 'nombre', 'tel', 'personas']);
-    $('#r-form-alert').innerHTML = ok ? '' : `<div class="alert alert-error" role="alert">${icon('alertc', 20)}<div><b>Revisa los campos marcados</b></div></div>`;
+    $('#r-form-alert').innerHTML = ok ? '' : `<div class="alert alert-error" role="alert" data-testid="reserva-error-campos">${icon('alertc', 20)}<div><b>Revisa los campos marcados</b></div></div>`;
     renderSteps(); renderSummary();
-    if (!ok) { const first = $('.is-error input, .helper.is-error', $('#reserva-box')); if (first && first.focus) first.focus(); return; }
+    if (!ok) { const first = $('#reserva-box [aria-invalid="true"], #reserva-hora-error'); if (first && first.focus) first.focus(); return; }
     const r = state.r, btn = $('#r-submit');
-    state.saving = true; btn.disabled = true; btn.innerHTML = 'Confirmando…';
+    state.saving = true; btn.disabled = true; btn.setAttribute('aria-busy', 'true'); btn.innerHTML = 'Confirmando…';
     try {
       const reserva = await DB.crearReserva({ mesa_id: r.mesa.id, fecha: r.fecha, hora_inicio: r.hora, cliente_nombre: r.nombre, cliente_contacto: r.tel, num_personas: r.personas });
       closeReserva();
@@ -489,7 +507,7 @@
       else { console.error(err); U.toast('No pudimos guardar la reserva. Inténtalo de nuevo.', 'error'); }
     } finally {
       state.saving = false;
-      if ($('#r-submit')) { btn.disabled = false; btn.innerHTML = `${icon('check', 18)}Confirmar reserva`; }
+      if ($('#r-submit')) { btn.disabled = false; btn.removeAttribute('aria-busy'); btn.innerHTML = `${icon('check', 18)}Confirmar reserva`; }
       renderSteps(); renderSummary();
     }
   }
@@ -508,10 +526,10 @@
     v.innerHTML = `<div class="container">
       <div class="confirm-hero">${U.successArt()}<h1 class="h2">¡Tu reserva ha sido confirmada!</h1><p class="body-lg muted" style="max-width:560px">Te esperamos, ${nombre}. Presenta el código al llegar o muestra esta pantalla como comprobante.</p></div>
       <div class="card confirm-card">
-        <div class="code-box"><div><small>Código de reserva</small><b>${U.codigoReserva(res)}</b></div>${chip('confirmada')}</div>
+        <div class="code-box"><div><small>Código de reserva</small><b data-testid="reserva-codigo">${U.codigoReserva(res)}</b></div>${chip('confirmada')}</div>
         <div class="detail-grid">${det.map(([i, k, val]) => `<div class="detail"><span class="ic">${icon(i, 18)}</span><div><span class="caption muted">${k}</span><b>${esc(val)}</b></div></div>`).join('')}</div>
         <div class="alert alert-info">${icon('info', 20)}<div><b>Tu mesa queda apartada por ${minutos} minutos</b>Si necesitas cambiar o cancelar, escríbenos por WhatsApp al +57 300 000 0000 (número de ejemplo).</div></div>
-        <div class="confirm-actions"><button class="btn btn-soft" id="c-print">${icon('printer', 18)}Guardar comprobante</button><button class="btn btn-primary" id="c-home">${icon('home', 18)}Volver al inicio</button></div>
+        <div class="confirm-actions"><button class="btn btn-soft" id="c-print" data-testid="reserva-comprobante">${icon('printer', 18)}Guardar comprobante</button><button class="btn btn-primary" id="c-home" data-testid="reserva-volver">${icon('home', 18)}Volver al inicio</button></div>
       </div></div>`;
     $('#vista-inicio').hidden = true; v.hidden = false;
     $('#site-header').classList.add('is-light');
