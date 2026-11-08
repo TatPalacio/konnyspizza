@@ -43,18 +43,31 @@ const fileVars = readDotEnv(envPath);
 const cfg = {
   SUPABASE_URL: pick('SUPABASE_URL', fileVars, ''),
   SUPABASE_ANON_KEY: pick('SUPABASE_ANON_KEY', fileVars, ''),
-  ADMIN_PASSWORD: pick('ADMIN_PASSWORD', fileVars, 'konys2026'),
 };
+const adminPassword = pick('ADMIN_PASSWORD', fileVars, 'konys2026');
 
 const banner = `/* Generado por scripts/build-config.js.
    Origen: process.env (Vercel) o, en local, el archivo .env de esta carpeta.
    SUPABASE_URL vacío = modo demo (localStorage). No subas este archivo con claves.
-   ADMIN_PASSWORD solo oculta el panel. Nunca pongas aquí la service_role key. */
+   La contraseña del panel NO va aquí: se escribe en js/admin-config.js y solo la carga admin.html.
+   Nunca pongas la service_role key. */
 `;
 fs.writeFileSync(outPath, `${banner}window.KONYS_CONFIG = ${JSON.stringify(cfg, null, 2)};\n`);
 
+/* Archivo aparte: index.html no lo pide, así la página pública no recibe la contraseña. */
+const adminPath = path.join(appDir, 'js', 'admin-config.js');
+const adminBanner = `/* Generado por scripts/build-config.js. Solo lo carga admin.html.
+   Oculta el panel; no sustituye a Supabase Auth. No lo incluyas en la página pública.
+   Si cambias la contraseña, no subas este archivo a un repositorio público. */
+`;
+fs.writeFileSync(adminPath, `${adminBanner}window.KONYS_CONFIG = Object.assign(window.KONYS_CONFIG || {}, ${JSON.stringify({ ADMIN_PASSWORD: adminPassword })});\n`);
+
 const modo = cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY ? 'Supabase configurado' : 'modo demo (faltan SUPABASE_URL o SUPABASE_ANON_KEY)';
 console.log('js/config.js generado:', modo);
+console.log('js/admin-config.js generado (la contraseña no se imprime).');
 if (cfg.SUPABASE_URL || cfg.SUPABASE_ANON_KEY) {
   console.log('Aviso: no hagas commit de js/config.js con claves. En git debe quedar la plantilla vacía.');
+}
+if (adminPassword !== 'konys2026') {
+  console.log('Aviso: la contraseña del panel no es la de ejemplo. No subas js/admin-config.js si el repositorio es público.');
 }

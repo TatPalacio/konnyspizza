@@ -19,7 +19,7 @@
   }
   const hasSupabase = !!(CFG.SUPABASE_URL && CFG.SUPABASE_ANON_KEY && sdkListo);
   const sb = hasSupabase ? window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY) : null;
-  const { isoDate, toMin, fromMin, hhmm, parseDate, DIAS } = window.KUI;
+  const { isoDate, toMin, fromMin, hhmm } = window.KUI;
 
   /** Error con código para que la interfaz muestre el estado correcto. */
   class ReservaError extends Error { constructor(code, msg, extra) { super(msg); this.code = code; this.extra = extra; } }
@@ -69,34 +69,119 @@
   const save = (s) => { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) { /* modo privado */ } };
   const clone = (x) => JSON.parse(JSON.stringify(x));
   const delay = (v) => new Promise(res => setTimeout(() => res(clone(v)), 120)); // simula red
+  const V = () => window.KVal;
+
+  /* La contraseña solo oculta el panel. En demo, leer datos personales o
+     escribir mesas/horarios/platos vuelve a comprobar la misma sesión. */
+  function sesionAdmin() {
+    try { return sessionStorage.getItem(V().SESION_ADMIN) === '1'; }
+    catch (e) { return false; }
+  }
+  const SIN_PERMISO_DEMO = 'Inicia sesión en el panel para ver o cambiar esta información.';
+  function exigeAdmin() {
+    if (!sesionAdmin()) throw new ReservaError('SIN_PERMISO', SIN_PERMISO_DEMO);
+  }
+  function rechazar(mapa) {
+    const msg = V().primerError(mapa);
+    if (msg) throw new ReservaError('DATOS_INVALIDOS', msg);
+  }
+  function filtrarReservas(lista, { fecha, mesa_id, desde } = {}) {
+    return lista.filter(r => (!fecha || r.fecha === fecha) && (!mesa_id || r.mesa_id === Number(mesa_id)) && (!desde || r.fecha >= desde))
+      .sort((a, b) => (a.fecha + a.hora_inicio).localeCompare(b.fecha + b.hora_inicio));
+  }
 
   const demo = {
-    async listMesas({ soloActivas } = {}) { const s = load(); return delay(s.mesas.filter(m => !soloActivas || m.activa).sort((a, b) => a.id - b.id)); },
+    async listMesas({ soloActivas } = {}) {
+      if (!soloActivas) exigeAdmin();
+      const s = load();
+      return delay(s.mesas.filter(m => !soloActivas || m.activa).sort((a, b) => a.id - b.id));
+    },
     async saveMesa(m) {
+      exigeAdmin();
       const s = load();
-      if (m.id) { const i = s.mesas.findIndex(x => x.id === m.id); s.mesas[i] = { ...s.mesas[i], ...m }; }
-      else s.mesas.push({ ...m, id: s.seq.mesas++, creado_en: new Date().toISOString() });
-      save(s); return delay(m);
+      const actual = m.id ? s.mesas.find(x => x.id === m.id) : null;
+      if (m.id && !actual) throw new ReservaError('DATOS_INVALIDOS', 'La mesa no existe.');
+      const merged = { ...(actual || {}), ...m };
+      rechazar(V().erroresMesa(merged, s.mesas, m.id || null));
+      const limpio = { ...(actual || {}), ...V().recortarMesa(merged) };
+      if (actual) {
+        const i = s.mesas.findIndex(x => x.id === actual.id);
+        s.mesas[i] = { ...limpio, id: actual.id, creado_en: actual.creado_en };
+      } else {
+        s.mesas.push({ ...limpio, id: s.seq.mesas++, creado_en: new Date().toISOString() });
+      }
+      save(s);
+      return delay(limpio);
     },
-    async deleteMesa(id) { const s = load(); s.mesas = s.mesas.filter(m => m.id !== id); save(s); return delay(true); },
+    async deleteMesa(id) {
+      exigeAdmin();
+      const s = load();
+      if (!s.mesas.some(m => m.id === id)) throw new ReservaError('DATOS_INVALIDOS', 'La mesa no existe.');
+      s.mesas = s.mesas.filter(m => m.id !== id);
+      save(s);
+      return delay(true);
+    },
     async listHorarios() { return delay(load().horarios); },
-    async saveHorarios(rows) { const s = load(); rows.forEach(r => { const i = s.horarios.findIndex(h => h.id === r.id); if (i >= 0) s.horarios[i] = { ...s.horarios[i], ...r }; }); save(s); return delay(true); },
-    async listPlatos({ soloDisponibles } = {}) { return delay(load().platos.filter(p => !soloDisponibles || p.disponible).sort((a, b) => a.id - b.id)); },
-    async savePlato(p) {
+    async saveHorarios(rows) {
+      exigeAdmin();
+      const errs = V().erroresHorarios(rows);
+      if (errs.length) throw new ReservaError('DATOS_INVALIDOS', errs[0]);
       const s = load();
-      if (p.id) { const i = s.platos.findIndex(x => x.id === p.id); s.platos[i] = { ...s.platos[i], ...p }; }
-      else s.platos.push({ ...p, id: s.seq.platos++ });
-      save(s); return delay(p);
+      rows.forEach(r => { const i = s.horarios.findIndex(h => h.id === r.id); if (i >= 0) s.horarios[i] = { ...s.horarios[i], ...r }; });
+      save(s);
+      return delay(true);
     },
-    async deletePlato(id) { const s = load(); s.platos = s.platos.filter(p => p.id !== id); save(s); return delay(true); },
-    async listReservas({ fecha, mesa_id, desde } = {}) {
-      return delay(load().reservas.filter(r => (!fecha || r.fecha === fecha) && (!mesa_id || r.mesa_id === Number(mesa_id)) && (!desde || r.fecha >= desde))
-        .sort((a, b) => (a.fecha + a.hora_inicio).localeCompare(b.fecha + b.hora_inicio)));
+    async listPlatos({ soloDisponibles } = {}) {
+      if (!soloDisponibles) exigeAdmin();
+      return delay(load().platos.filter(p => !soloDisponibles || p.disponible).sort((a, b) => a.id - b.id));
     },
-    async insertReserva(r) { const s = load(); const nueva = { ...r, id: s.seq.reservas++, creado_en: new Date().toISOString() }; s.reservas.push(nueva); save(s); return delay(nueva); },
-    async setEstadoReserva(id, estado) { const s = load(); const r = s.reservas.find(x => x.id === id); if (r) r.estado = estado; save(s); return delay(r); },
+    async savePlato(p) {
+      exigeAdmin();
+      const s = load();
+      const actual = p.id ? s.platos.find(x => x.id === p.id) : null;
+      if (p.id && !actual) throw new ReservaError('DATOS_INVALIDOS', 'El plato no existe.');
+      const merged = { ...(actual || {}), ...p };
+      rechazar(V().erroresPlato(merged, p.id || null));
+      const limpio = { ...(actual || {}), ...V().recortarPlato(merged) };
+      if (actual) {
+        const i = s.platos.findIndex(x => x.id === actual.id);
+        s.platos[i] = { ...limpio, id: actual.id };
+      } else s.platos.push({ ...limpio, id: s.seq.platos++ });
+      save(s);
+      return delay(limpio);
+    },
+    async deletePlato(id) {
+      exigeAdmin();
+      const s = load();
+      if (!s.platos.some(p => p.id === id)) throw new ReservaError('DATOS_INVALIDOS', 'El plato no existe.');
+      s.platos = s.platos.filter(p => p.id !== id);
+      save(s);
+      return delay(true);
+    },
+    async listReservas(filtro = {}) {
+      exigeAdmin();
+      return delay(filtrarReservas(load().reservas, filtro));
+    },
+    async setEstadoReserva(id, estado) {
+      exigeAdmin();
+      if (!V().ESTADOS_RESERVA.includes(estado)) throw new ReservaError('DATOS_INVALIDOS', 'Estado de reserva no válido.');
+      const s = load();
+      const r = s.reservas.find(x => x.id === id);
+      if (!r) throw new ReservaError('DATOS_INVALIDOS', 'La reserva no existe.');
+      r.estado = estado;
+      save(s);
+      return delay(r);
+    },
     async reset() { const s = seed(); save(s); return true; },
   };
+
+  function guardarReservaDemo(r) {
+    const s = load();
+    const nueva = { ...r, id: s.seq.reservas++, creado_en: new Date().toISOString() };
+    s.reservas.push(nueva);
+    save(s);
+    return nueva;
+  }
 
   /* ------------------------------------------------------------------ */
   /* SUPABASE                                                            */
@@ -117,12 +202,24 @@
   const HINTS = ['HORA_OCUPADA', 'CAPACIDAD', 'MESA_INACTIVA', 'HORARIO_INVALIDO', 'DATOS_INVALIDOS'];
   const live = {
     async listMesas({ soloActivas } = {}) { let q = sb.from('mesas').select('*').order('id'); if (soloActivas) q = q.eq('activa', true); return ok(await q); },
-    async saveMesa(m) { const { id, ...rest } = m; return okFilas(id ? await sb.from('mesas').update(rest).eq('id', id).select() : await sb.from('mesas').insert(rest).select()); },
+    async saveMesa(m) {
+      rechazar(V().erroresMesa(m, null, m.id || null));
+      const limpio = V().recortarMesa(m);
+      return okFilas(m.id ? await sb.from('mesas').update(limpio).eq('id', m.id).select() : await sb.from('mesas').insert(limpio).select());
+    },
     async deleteMesa(id) { return okFilas(await sb.from('mesas').delete().eq('id', id).select('id')); },
     async listHorarios() { return ok(await sb.from('horarios').select('*').order('id')); },
-    async saveHorarios(rows) { return ok(await sb.from('horarios').upsert(rows).select('id')); },
+    async saveHorarios(rows) {
+      const errs = V().erroresHorarios(rows);
+      if (errs.length) throw new ReservaError('DATOS_INVALIDOS', errs[0]);
+      return ok(await sb.from('horarios').upsert(rows).select('id'));
+    },
     async listPlatos({ soloDisponibles } = {}) { let q = sb.from('platos').select('*').order('id'); if (soloDisponibles) q = q.eq('disponible', true); return ok(await q); },
-    async savePlato(p) { const { id, ...rest } = p; return okFilas(id ? await sb.from('platos').update(rest).eq('id', id).select() : await sb.from('platos').insert(rest).select()); },
+    async savePlato(p) {
+      rechazar(V().erroresPlato(p, p.id || null));
+      const limpio = V().recortarPlato(p);
+      return okFilas(p.id ? await sb.from('platos').update(limpio).eq('id', p.id).select() : await sb.from('platos').insert(limpio).select());
+    },
     async deletePlato(id) { return okFilas(await sb.from('platos').delete().eq('id', id).select('id')); },
     /** Reservas completas (con datos personales): solo las devuelve a un administrador. */
     async listReservas({ fecha, mesa_id, desde } = {}) {
@@ -132,14 +229,17 @@
     },
     /** Ocupación pública de una fecha (mesa_id, fecha, hora_inicio, hora_fin, estado), sin datos personales. */
     async listOcupacion({ fecha, mesa_id } = {}) { return ok(await sb.rpc('ocupacion_reservas', { p_fecha: fecha, p_mesa_id: mesa_id ?? null })); },
-    async setEstadoReserva(id, estado) { return okFilas(await sb.from('reservas').update({ estado }).eq('id', id).select()); },
+    async setEstadoReserva(id, estado) {
+      if (!V().ESTADOS_RESERVA.includes(estado)) throw new ReservaError('DATOS_INVALIDOS', 'Estado de reserva no válido.');
+      return okFilas(await sb.from('reservas').update({ estado }).eq('id', id).select());
+    },
     /** ¿La sesión actual es de un administrador registrado en public.administradores? */
     async esAdmin() { const { data, error } = await sb.rpc('es_admin'); return !error && data === true; },
     async reset() { return false; },
   };
-  demo.listOcupacion = async ({ fecha, mesa_id } = {}) => (await demo.listReservas({ fecha, mesa_id }))
-    .filter(r => r.estado !== 'cancelada').map(({ mesa_id: m, fecha: f, hora_inicio, hora_fin, estado }) => ({ mesa_id: m, fecha: f, hora_inicio, hora_fin, estado }));
-  demo.esAdmin = async () => true;
+  demo.listOcupacion = async ({ fecha, mesa_id } = {}) => delay(filtrarReservas(load().reservas, { fecha, mesa_id })
+    .filter(r => r.estado !== 'cancelada').map(({ mesa_id: m, fecha: f, hora_inicio, hora_fin, estado }) => ({ mesa_id: m, fecha: f, hora_inicio, hora_fin, estado })));
+  demo.esAdmin = async () => sesionAdmin();
 
   const api = hasSupabase ? live : demo;
 
@@ -152,10 +252,14 @@
    * - Demo: las mismas reglas se validan aquí con los datos del navegador.
    */
   async function crearReserva({ mesa_id, fecha, hora_inicio, cliente_nombre, cliente_contacto, num_personas }) {
+    const contacto = V().contactoLimpio(cliente_contacto);
     if (hasSupabase) {
+      const campos = V().erroresReserva({ nombre: cliente_nombre, tel: contacto || '', personas: num_personas, hora: hora_inicio });
+      if (campos.nombre || campos.tel || campos.personas) throw new ReservaError('DATOS_INVALIDOS', campos.nombre || campos.tel || campos.personas);
+      if (!fecha || !hora_inicio) throw new ReservaError('HORARIO_INVALIDO', 'Selecciona fecha y horario.');
       const { data, error } = await sb.rpc('crear_reserva', {
         p_mesa_id: Number(mesa_id), p_fecha: fecha, p_hora_inicio: hhmm(hora_inicio),
-        p_cliente_nombre: String(cliente_nombre).trim(), p_cliente_contacto: cliente_contacto ? String(cliente_contacto).replace(/\D/g, '') : null,
+        p_cliente_nombre: String(cliente_nombre).trim(), p_cliente_contacto: contacto,
         p_num_personas: Number(num_personas),
       });
       if (error) {
@@ -164,26 +268,18 @@
       }
       return data;
     }
-    const mesas = await api.listMesas();
-    const mesa = mesas.find(m => m.id === Number(mesa_id));
-    if (!mesa || !mesa.activa) throw new ReservaError('MESA_INACTIVA', 'La mesa no está disponible para reservas.');
-    if (Number(num_personas) > mesa.capacidad) throw new ReservaError('CAPACIDAD', `La ${mesa.nombre} admite máximo ${mesa.capacidad} personas.`, { max: mesa.capacidad });
-    const horarios = await api.listHorarios();
-    const dia = DIAS[parseDate(fecha).getDay()];
-    const jornada = horarios.find(h => h.dia_semana === dia && h.activo && toMin(hora_inicio) >= toMin(h.hora_inicio) && toMin(hora_inicio) < toMin(h.hora_fin));
-    if (!jornada) throw new ReservaError('HORARIO_INVALIDO', 'El restaurante no atiende en esa fecha u hora.');
-    const dur = Number(jornada.duracion_slot);
-    const ini = toMin(hora_inicio), fin = ini + dur;
-    if (fin > toMin(jornada.hora_fin)) throw new ReservaError('HORARIO_INVALIDO', 'Ese horario no está disponible para reservas.');
-    const existentes = await api.listReservas({ fecha, mesa_id: mesa.id });
-    if (existentes.some(r => r.estado !== 'cancelada' && ini < toMin(r.hora_fin) && toMin(r.hora_inicio) < fin)) {
-      throw new ReservaError('HORA_OCUPADA', 'Este horario ya no está disponible.');
-    }
-    return demo.insertReserva({
-      mesa_id: mesa.id, fecha, hora_inicio: hhmm(hora_inicio), hora_fin: fromMin(fin),
-      cliente_nombre: String(cliente_nombre).trim(), cliente_contacto: cliente_contacto ? String(cliente_contacto).replace(/\D/g, '') : null,
-      num_personas: Number(num_personas), estado: 'confirmada',
+    const s = load();
+    const ev = V().evaluarReserva({
+      mesa: s.mesas.find(m => m.id === Number(mesa_id)),
+      fecha, hora_inicio, cliente_nombre, cliente_contacto: contacto, num_personas,
+      horarios: s.horarios, reservas: s.reservas,
     });
+    if (!ev.ok) throw new ReservaError(ev.code, ev.message, ev.extra);
+    return delay(guardarReservaDemo({
+      mesa_id: ev.mesa.id, fecha, hora_inicio: ev.hora_inicio, hora_fin: ev.hora_fin,
+      cliente_nombre: ev.nombre, cliente_contacto: ev.contacto,
+      num_personas: ev.personas, estado: 'confirmada',
+    }));
   }
 
   window.DB = { mode: hasSupabase ? 'supabase' : 'demo', ReservaError, crearReserva, ...api };
