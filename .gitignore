@@ -9,6 +9,11 @@ js/admin-config.js
 .vercel
 node_modules
 
+# Artefactos generados por las pruebas automáticas
+pruebas/reportes/
+pruebas/__pycache__/
+__pycache__/
+
 .DS_Store
 Thumbs.db
 desktop.ini

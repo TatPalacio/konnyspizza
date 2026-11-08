@@ -1,0 +1,5 @@
+selenium>=4.20
+reportlab>=4.0
+
+# Opcional: convierte la portada del PDF en docs/capturas/reporte.png
+# pymupdf>=1.24
