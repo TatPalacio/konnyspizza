@@ -2,5 +2,20 @@
   "buildCommand": "node scripts/build-config.js",
   "outputDirectory": ".",
   "cleanUrls": true,
-  "rewrites": [{ "source": "/admin", "destination": "/admin.html" }]
+  "rewrites": [{ "source": "/admin", "destination": "/admin.html" }],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=(), payment=()" },
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; frame-ancestors 'none'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://cdn.jsdelivr.net https://fonts.googleapis.com https://fonts.gstatic.com https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:"
+        }
+      ]
+    }
+  ]
 }
