@@ -24,7 +24,9 @@ konys-reservas-app/
 ├── admin.html            # Panel de administración (/admin en Vercel)
 ├── css/styles.css        # Design System (tokens del Figma) + componentes + responsive
 ├── js/
-│   ├── config.js         # Lo lee el navegador. En git va con claves vacías
+│   ├── config.js         # URL y anon key. En git va vacío. Lo cargan las dos páginas
+│   ├── admin-config.js   # Contraseña del panel. Solo lo carga admin.html
+│   ├── validacion.js     # Reglas compartidas por la interfaz y la capa de datos
 │   ├── ui.js             # Iconos, ilustraciones, formatos, generación de horarios
 │   ├── supabase.js       # Conexión con Supabase (o modo demo local)
 │   ├── cliente.js        # Lógica del módulo cliente
@@ -39,7 +41,7 @@ konys-reservas-app/
 
 ## Ejecutar en local
 
-El modo demo no necesita claves. `js/config.js` ya está en el repositorio con `SUPABASE_URL` y `SUPABASE_ANON_KEY` vacías.
+El modo demo no necesita claves. `js/config.js` ya está en el repositorio con `SUPABASE_URL` y `SUPABASE_ANON_KEY` vacías. La contraseña del panel está en `js/admin-config.js`, que la página pública no carga.
 
 1. Abre esta carpeta.
 2. Abre `index.html` en el navegador (doble clic) o sírvela con un servidor estático.
@@ -52,7 +54,7 @@ Si `SUPABASE_URL` está vacío, la app funciona en **modo demo**: usa datos de e
 
 1. Copia `.env.example` como `.env` (ya puede existir, vacío).
 2. Pega `SUPABASE_URL` y `SUPABASE_ANON_KEY` (la anon/public key, nunca la service_role). Si dejas `ADMIN_PASSWORD` vacío, el panel sigue usando `konys2026`.
-3. Desde esta carpeta ejecuta `node scripts/build-config.js`. El script reescribe `js/config.js`, que es el archivo que carga el navegador.
+3. Desde esta carpeta ejecuta `node scripts/build-config.js`. El script reescribe `js/config.js` (página pública, sin contraseña) y `js/admin-config.js` (solo el panel).
 4. Recarga `index.html`. Si las dos claves de Supabase tienen valor, desaparece el modo demo.
 
 `.env` no se sube a Git. `js/config.js` sí, pero solo como plantilla vacía: si el script escribió claves, no lo commitees así.
@@ -66,7 +68,7 @@ Si `SUPABASE_URL` está vacío, la app funciona en **modo demo**: usa datos de e
 ### Seguridad y panel de administración
 
 - Los visitantes **no** pueden leer nombres ni teléfonos de las reservas ni modificar mesas, horarios o platos. Reservan con `crear_reserva()`, que valida en el servidor el horario, la capacidad, la mesa activa y la superposición.
-- La contraseña que termina en `js/config.js` **no es seguridad**: cualquiera puede leerla en el navegador. Solo oculta la interfaz del panel.
+- La contraseña que termina en `js/admin-config.js` **no es seguridad**: quien abre ese archivo la ve. Solo oculta la interfaz del panel y, en modo demo, la capa de datos vuelve a exigir esa sesión antes de mostrar teléfonos o guardar cambios. La página pública no carga ese archivo.
 - Por eso, conectado a Supabase, el panel muestra un aviso y la base de datos rechaza sus cambios hasta que exista un inicio de sesión real con **Supabase Auth**. Los pasos están en la sección 7 de `schema.sql`. Para una presentación académica, la sección 8 trae un modo opcional sin autenticación, documentado como inseguro.
 - El **modo demo** funciona igual que antes.
 
@@ -76,7 +78,7 @@ Si `SUPABASE_URL` está vacío, la app funciona en **modo demo**: usa datos de e
 2. En Vercel: **Add New → Project →** importa el repositorio (framework: *Other*).
 3. En **Settings → General → Root Directory** elige `konys-reservas-appw/konys-reservas-app`. Si la raíz queda en el repo, Vercel no ve `index.html` ni `vercel.json`.
 4. En **Settings → Environment Variables** agrega `SUPABASE_URL`, `SUPABASE_ANON_KEY` y `ADMIN_PASSWORD`.
-5. Vercel ejecuta `node scripts/build-config.js`. En el build manda `process.env` (no hace falta subir `.env`) y reescribe `js/config.js`. El panel queda disponible en `/admin`.
+5. Vercel ejecuta `node scripts/build-config.js`. En el build manda `process.env` (no hace falta subir `.env`) y reescribe `js/config.js` y `js/admin-config.js`. El panel queda disponible en `/admin`. `vercel.json` añade cabeceras de seguridad (nosniff, anti-clickjacking y una CSP compatible con fuentes, el SDK y Supabase).
 
 > La clave *anon* de Supabase es pública por diseño: la protección real la dan las reglas RLS de `schema.sql`. No uses nunca la *service_role key* en el front-end.
 
