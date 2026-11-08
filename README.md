@@ -34,6 +34,7 @@ konys-reservas-app/
 │   ├── cliente.js        # Lógica del módulo cliente
 │   └── admin.js          # Lógica del módulo administrador
 ├── supabase/schema.sql   # Tablas, reglas RLS, índice anti doble reserva y datos iniciales
+├── supabase/migracion-auth-admin.sql # Solo si el schema viejo ya está aplicado: política y usuario_id
 ├── scripts/build-config.js # Vuelca .env o las variables de Vercel a js/config.js
 ├── pruebas/
 │   ├── pruebas_reservas.py # Suite de 30 pruebas Selenium + servidor local en modo demo
@@ -57,36 +58,37 @@ El modo demo no necesita claves. `js/config.js` ya está en el repositorio con `
 
 Si `SUPABASE_URL` está vacío, la app funciona en **modo demo**: usa datos de ejemplo guardados en el navegador (localStorage) y muestra la etiqueta «Modo demo» abajo a la izquierda, con un botón para restablecer los datos. Así puedes probar todo sin backend.
 
-- Panel de administración: `admin.html` · contraseña por defecto **`konys2026`**.
+- Panel en **modo demo**: `admin.html` pide solo la contraseña local (`js/admin-config.js`, por defecto **`konys2026`**). El visitante reserva sin cuenta.
 
 ### Cuando tengas las claves
 
 1. Copia `.env.example` como `.env` (ya puede existir, vacío).
-2. Pega `SUPABASE_URL` y `SUPABASE_ANON_KEY` (la anon/public key, nunca la service_role). Si dejas `ADMIN_PASSWORD` vacío, el panel sigue usando `konys2026`.
+2. Pega `SUPABASE_URL` y `SUPABASE_ANON_KEY` (la anon/public key, nunca la service_role). `ADMIN_PASSWORD` solo cambia la contraseña del modo demo; vacío sigue en `konys2026`. No es el usuario de Supabase.
 3. Desde esta carpeta ejecuta `node scripts/build-config.js`. El script reescribe `js/config.js` (página pública, sin contraseña) y `js/admin-config.js` (solo el panel).
-4. Recarga `index.html`. Si las dos claves de Supabase tienen valor, desaparece el modo demo.
+4. Recarga `index.html`. Si las dos claves de Supabase tienen valor, desaparece el modo demo y el panel pide correo y contraseña de Authentication.
 
 `.env` no se sube a Git. `js/config.js` sí, pero solo como plantilla vacía: si el script escribió claves, no lo commitees así.
 
 ## Conectar Supabase
 
 1. Crea un proyecto en [supabase.com](https://supabase.com).
-2. En **SQL Editor → New query** pega todo `supabase/schema.sql` y pulsa **Run**. Crea las tablas, las reglas de seguridad (RLS), las funciones `crear_reserva` y `ocupacion_reservas`, y los datos iniciales. El script es idempotente: puedes volver a ejecutarlo, y si falla no aplica nada.
+2. En **SQL Editor → New query** pega todo `supabase/schema.sql` y pulsa **Run**. Crea las tablas, las reglas de seguridad (RLS), las funciones `crear_reserva` y `ocupacion_reservas`, y los datos iniciales. El script es idempotente: puedes volver a ejecutarlo, y si falla no aplica nada. Si el proyecto ya tenía el schema anterior, pega en su lugar `supabase/migracion-auth-admin.sql` (añade la política del panel y quita `usuario_id` solo si existe; no borra reservas).
 3. En **Project Settings → API** copia la *Project URL* y la *anon public key* en `.env` y ejecuta `node scripts/build-config.js`.
+4. En **Authentication** desactiva el registro público, crea el usuario del administrador y añade su `id` a `public.administradores` (sección 7 de `schema.sql`).
 
 ### Seguridad y panel de administración
 
-- Los visitantes **no** pueden leer nombres ni teléfonos de las reservas ni modificar mesas, horarios o platos. Reservan con `crear_reserva()`, que valida en el servidor el horario, la capacidad, la mesa activa y la superposición.
-- La contraseña que termina en `js/admin-config.js` **no es seguridad**: quien abre ese archivo la ve. Solo oculta la interfaz del panel y, en modo demo, la capa de datos vuelve a exigir esa sesión antes de mostrar teléfonos o guardar cambios. La página pública no carga ese archivo.
-- Por eso, conectado a Supabase, el panel muestra un aviso y la base de datos rechaza sus cambios hasta que exista un inicio de sesión real con **Supabase Auth**. Los pasos están en la sección 7 de `schema.sql`. Para una presentación académica, la sección 8 trae un modo opcional sin autenticación, documentado como inseguro.
-- El **modo demo** funciona igual que antes.
+- Los visitantes **no** inician sesión y **no** tienen cuenta. Reservan con `crear_reserva()`, que valida en el servidor el horario, la capacidad, la mesa activa y la superposición. No pueden leer nombres ni teléfonos ni modificar mesas, horarios o platos.
+- **Modo demo** (sin URL o sin clave pública): `admin.html` compara la contraseña de `js/admin-config.js` y marca la sesión en el navegador. Esa contraseña no es seguridad real y la página pública no carga ese archivo.
+- **Con Supabase**, el panel entra con el correo y la contraseña de Authentication. Después comprueba que ese usuario esté en `administradores`. Si no lo está, cierra la sesión y muestra el error. Las peticiones llevan el JWT para que RLS aplique. La contraseña demo no sirve aquí. La *service_role* no va al navegador.
+- La sección 8 de `schema.sql` documenta un modo académico sin autenticación. Es inseguro y no hace falta para el flujo normal.
 
 ## Desplegar en Vercel
 
 1. Sube el repositorio a GitHub. `.env` queda fuera por `.gitignore`. `js/config.js` sí va, con las claves vacías.
 2. En Vercel: **Add New → Project →** importa el repositorio (framework: *Other*).
 3. En **Settings → General → Root Directory** elige `konys-reservas-appw/konys-reservas-app`. Si la raíz queda en el repo, Vercel no ve `index.html` ni `vercel.json`.
-4. En **Settings → Environment Variables** agrega `SUPABASE_URL`, `SUPABASE_ANON_KEY` y `ADMIN_PASSWORD`.
+4. En **Settings → Environment Variables** agrega `SUPABASE_URL` y `SUPABASE_ANON_KEY`. `ADMIN_PASSWORD` es opcional y solo cambia la contraseña del modo demo.
 5. Vercel ejecuta `node scripts/build-config.js`. En el build manda `process.env` (no hace falta subir `.env`) y reescribe `js/config.js` y `js/admin-config.js`. El panel queda disponible en `/admin`. `vercel.json` añade cabeceras de seguridad (nosniff, anti-clickjacking y una CSP compatible con fuentes, el SDK y Supabase).
 
 > La clave *anon* de Supabase es pública por diseño: la protección real la dan las reglas RLS de `schema.sql`. No uses nunca la *service_role key* en el front-end.
@@ -102,14 +104,14 @@ Si `SUPABASE_URL` está vacío, la app funciona en **modo demo**: usa datos de e
 | RF-05 Reserva con nombre, personas (≤ capacidad) y contacto opcional | Formulario + validaciones + `supabase.js › crearReserva` |
 | RF-06 Confirmación con los datos y código | Vista *Reserva confirmada* (permite imprimir el comprobante) |
 | RF-07 Carta por categorías (oculta los no disponibles) | `index.html#carta` |
-| RF-08 Acceso con contraseña | `admin.html` |
+| RF-08 Acceso al panel (contraseña local en demo; correo de Supabase Auth si hay claves) | `admin.html` |
 | RF-09 / RF-10 Registro y listado de mesas | Panel › Mesas |
 | RF-11 Horarios por día y duración | Panel › Horarios (con vista previa de slots) |
 | RF-12 Reservas con filtros por fecha y mesa | Panel › Reservas |
 | RF-13 Activar / desactivar mesas | Toggle en Panel › Mesas |
 | RF-14 Agregar, editar, ocultar y eliminar platos | Panel › Carta |
 
-**Estados de error contemplados:** horario tomado por otra persona antes de confirmar (verificación en el servidor + restricción de exclusión que impide reservas superpuestas), capacidad excedida, días u horarios sin disponibilidad, campos obligatorios y teléfono con formato inválido, contraseña incorrecta y validaciones en los formularios del panel.
+**Estados de error contemplados:** horario tomado por otra persona antes de confirmar (verificación en el servidor + restricción de exclusión que impide reservas superpuestas), capacidad excedida, días u horarios sin disponibilidad, campos obligatorios y teléfono con formato inválido, contraseña demo incorrecta, correo o contraseña de Auth incorrectos, cuenta que no está en `administradores`, y validaciones en los formularios del panel.
 
 **Responsive:** escritorio (≥ 1280 px), portátil, tablet (≤ 1023 px: menú hamburguesa y panel lateral desplegable) y móvil (≤ 639 px: tarjetas horizontales, reserva a pantalla completa con botón fijo, tablas con desplazamiento).
 

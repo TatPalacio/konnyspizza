@@ -1,7 +1,7 @@
 /* ==========================================================================
    Konys Pizza · admin.js
    Módulo administrador (RF-08 a RF-14):
-   acceso con contraseña · resumen del día · reservas con filtros ·
+   acceso (contraseña demo o Supabase Auth) · resumen del día · reservas ·
    CRUD de mesas y cambio de estado · horarios por día · CRUD de la carta.
    ========================================================================== */
 (function () {
@@ -10,12 +10,10 @@
   const { icon, esc, chip } = U;
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
-  const CFG = window.KONYS_CONFIG || {};
-  const PASSWORD = CFG.ADMIN_PASSWORD || 'konys2026';
-  const SESSION = KVal.SESION_ADMIN;
   const SECTIONS = { resumen: 'Resumen', reservas: 'Reservas', mesas: 'Mesas', horarios: 'Horarios', carta: 'Carta' };
   const DIAS_ORDEN = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
   const PAGE = 8;
+  let sesionActual = null;
 
   const st = {
     mesas: [], horarios: [], platos: [], reservas: [],
@@ -28,14 +26,100 @@
     $('#login-pics').innerHTML = `<div class="media media-fill">${U.tableArt('terraza', 4)}</div><div class="media media-fill">${U.tableArt('salon', 6)}</div>`;
     const d = new Date();
     $('#today').insertAdjacentText('beforeend', `${U.DIAS[d.getDay()][0].toUpperCase() + U.DIAS[d.getDay()].slice(1)}, ${d.getDate()} ${U.MESES[d.getMonth()].slice(0, 3)} ${d.getFullYear()}`);
-    bindLogin(); bindShell();
-    sessionStorage.getItem(SESSION) === '1' ? enter() : showLogin();
+    bindLogin(); bindShell(); vigilarSesion();
+    prepararFormulario();
+    comprobarSesion();
   });
 
   /* ---------------------------------------------------------------- */
   /* Acceso (RF-08)                                                     */
+  /* Demo: solo contraseña local. Supabase: correo + Auth + administradores. */
   /* ---------------------------------------------------------------- */
-  function showLogin() { $('#login').hidden = false; $('#shell').hidden = true; setTimeout(() => $('#i-pass').focus(), 50); }
+  function esSupabase() { return DB.mode === 'supabase'; }
+
+  /** Solo modo demo. No es la contraseña del usuario de Supabase. */
+  function passwordDemo() {
+    const cfg = window.KONYS_CONFIG || {};
+    return cfg.ADMIN_PASSWORD || 'konys2026';
+  }
+
+  function prepararFormulario() {
+    const supa = esSupabase();
+    $('#f-email').hidden = !supa;
+    const email = $('#i-email');
+    email.required = supa;
+    email.disabled = !supa;
+    if (!supa) email.value = '';
+    const ayuda = $('#login-ayuda');
+    if (ayuda) {
+      ayuda.textContent = supa
+        ? 'Ingresa con el correo y la contraseña de Supabase Authentication'
+        : 'Ingresa la contraseña para continuar';
+    }
+  }
+
+  async function comprobarSesion() {
+    try {
+      const s = await DB.auth.sesion();
+      if (s && s.rol === 'admin') {
+        aplicarUsuario(s);
+        await enter();
+        return;
+      }
+    } catch (e) {
+      console.error(e && e.code ? e.code : 'sesion');
+    }
+    showLogin();
+    if (DB.auth && DB.auth.aviso) alertaLogin('error', 'Cuenta sin permisos', DB.auth.aviso);
+  }
+
+  function aplicarUsuario(s) {
+    sesionActual = s;
+    const nombre = s.nombre || 'Administrador';
+    $('#admin-user-name').textContent = nombre;
+    $('#admin-user-email').textContent = s.email || 'Konys Pizza';
+    const iniciales = nombre.trim().split(/\s+/).slice(0, 2).map(p => p[0] || '').join('').toUpperCase();
+    $('#admin-avatar').textContent = iniciales || 'AD';
+  }
+
+  function showLogin() {
+    $('#login').hidden = false;
+    $('#shell').hidden = true;
+    setTimeout(() => {
+      if (esSupabase() && !$('#i-email').value) $('#i-email').focus();
+      else $('#i-pass').focus();
+    }, 50);
+  }
+
+  function limpiarErroresLogin() {
+    ['email', 'pass'].forEach(k => {
+      const f = $(`#f-${k}`);
+      if (!f) return;
+      f.querySelector('.input').classList.remove('is-error');
+      const i = f.querySelector('input');
+      if (i) i.setAttribute('aria-invalid', 'false');
+      const h = f.querySelector('.helper');
+      if (h) h.hidden = true;
+    });
+    $('#login-alert').innerHTML = '';
+  }
+
+  function marcarCampo(k, msg) {
+    const f = $(`#f-${k}`);
+    if (!f) return;
+    f.querySelector('.input').classList.add('is-error');
+    f.querySelector('input').setAttribute('aria-invalid', 'true');
+    const h = f.querySelector('.helper');
+    h.hidden = false;
+    h.innerHTML = `${icon('alertc', 14)}${esc(msg)}`;
+  }
+
+  function alertaLogin(tipo, titulo, texto) {
+    const estilo = tipo === 'warning' ? 'alert-warning' : 'alert-error';
+    const ic = tipo === 'warning' ? 'lock' : 'alertc';
+    $('#login-alert').innerHTML = `<div class="alert ${estilo}" role="alert" data-testid="login-error">${icon(ic, 20)}<div><b>${esc(titulo)}</b>${esc(texto)}</div></div>`;
+  }
+
   function bindLogin() {
     $('#toggle-pass').onclick = () => {
       const i = $('#i-pass');
@@ -45,25 +129,104 @@
       $('#toggle-pass').setAttribute('aria-pressed', String(!oculto));
       $('#toggle-pass').setAttribute('aria-label', oculto ? 'Mostrar contraseña' : 'Ocultar contraseña');
     };
-    $('#i-pass').addEventListener('input', () => {
-      $('#f-pass .input').classList.remove('is-error');
-      $('#f-pass .helper').hidden = true;
-      $('#i-pass').setAttribute('aria-invalid', 'false');
-      $('#login-alert').innerHTML = '';
+    ['#i-email', '#i-pass'].forEach(sel => {
+      $(sel).addEventListener('input', limpiarErroresLogin);
     });
-    $('#login-form').addEventListener('submit', e => {
+    $('#login-form').addEventListener('submit', async e => {
       e.preventDefault();
-      const v = $('#i-pass').value;
-      if (v === PASSWORD) { sessionStorage.setItem(SESSION, '1'); $('#i-pass').value = ''; enter(); return; }
-      $('#f-pass .input').classList.add('is-error');
-      $('#i-pass').setAttribute('aria-invalid', 'true');
-      const h = $('#f-pass .helper'); h.hidden = false; h.innerHTML = `${icon('alertc', 14)}${v ? 'La contraseña no coincide' : 'Ingresa la contraseña'}`;
-      $('#login-alert').innerHTML = v ? `<div class="alert alert-error" role="alert" data-testid="login-error">${icon('alertc', 20)}<div><b>Contraseña incorrecta</b>Verifica e inténtalo de nuevo.</div></div>` : '';
-      $('#i-pass').focus();
+      limpiarErroresLogin();
+      if (esSupabase()) await entrarSupabase();
+      else await entrarDemo();
     });
   }
+
+  async function entrarDemo() {
+    const v = $('#i-pass').value;
+    if (v !== passwordDemo()) {
+      marcarCampo('pass', v ? 'La contraseña no coincide' : 'Ingresa la contraseña');
+      if (v) alertaLogin('error', 'Contraseña incorrecta', 'Verifica e inténtalo de nuevo.');
+      $('#i-pass').focus();
+      return;
+    }
+    const s = await DB.auth.abrir();
+    $('#i-pass').value = '';
+    aplicarUsuario(s);
+    await enter();
+  }
+
+  async function entrarSupabase() {
+    const email = $('#i-email').value.trim();
+    const password = $('#i-pass').value;
+    const campos = KVal.erroresLogin({ email, password });
+    if (campos.email) marcarCampo('email', campos.email);
+    if (campos.password) marcarCampo('pass', campos.password);
+    if (campos.email || campos.password) {
+      (campos.email ? $('#i-email') : $('#i-pass')).focus();
+      return;
+    }
+    const btn = $('#login-form button[type="submit"]');
+    btn.disabled = true;
+    btn.setAttribute('aria-busy', 'true');
+    btn.innerHTML = 'Verificando…';
+    try {
+      const s = await DB.auth.login(email, password);
+      if (!s || s.rol !== 'admin') {
+        await DB.auth.cerrar();
+        throw new DB.ReservaError('SIN_PERMISO', 'Esta cuenta no está registrada como administrador.');
+      }
+      aplicarUsuario(s);
+      $('#i-email').value = '';
+      $('#i-pass').value = '';
+      await enter();
+    } catch (err) {
+      const code = err && err.code;
+      console.error(code || 'login');
+      if (code === 'CREDENCIALES') {
+        marcarCampo('pass', 'Correo o contraseña incorrectos');
+        alertaLogin('error', 'No pudimos iniciar sesión', err.message);
+        $('#i-pass').focus();
+      } else if (code === 'BLOQUEO') {
+        alertaLogin('warning', 'Demasiados intentos', err.message);
+        $('#i-pass').focus();
+      } else if (code === 'SIN_PERMISO') {
+        alertaLogin('error', 'Cuenta sin permisos', err.message);
+        $('#i-email').focus();
+      } else {
+        alertaLogin('error', 'No pudimos iniciar sesión', (err && err.message) || 'Revisa la conexión e inténtalo de nuevo.');
+        $('#i-email').focus();
+      }
+      $('#i-pass').value = '';
+    } finally {
+      btn.disabled = false;
+      btn.removeAttribute('aria-busy');
+      btn.innerHTML = `Ingresar${icon('arrowr', 18)}`;
+    }
+  }
+
+  function vigilarSesion() {
+    setInterval(async () => {
+      if ($('#shell').hidden) return;
+      try {
+        const s = await DB.auth.sesion();
+        if (!s || s.rol !== 'admin') sesionExpirada();
+      } catch (e) { /* sin red: no cerrar la sesión */ }
+    }, 60000);
+  }
+
+  function sesionExpirada() {
+    if ($('#shell').hidden) return;
+    const aviso = DB.auth && DB.auth.aviso;
+    DB.auth.cerrar();
+    sesionActual = null;
+    location.hash = '';
+    showLogin();
+    if (aviso) alertaLogin('error', 'Cuenta sin permisos', aviso);
+    else U.toast('Tu sesión ya no es válida. Vuelve a iniciar sesión.', 'error');
+  }
+
   async function enter() {
-    $('#login').hidden = true; $('#shell').hidden = false;
+    $('#login').hidden = true;
+    $('#shell').hidden = false;
     await loadAll();
     st.sinAdmin = DB.mode === 'supabase' && !(await DB.esAdmin());
     route();
@@ -73,7 +236,12 @@
   /* Estructura del panel y navegación por hash                         */
   /* ---------------------------------------------------------------- */
   function bindShell() {
-    $('#logout').onclick = () => { sessionStorage.removeItem(SESSION); location.hash = ''; showLogin(); };
+    $('#logout').onclick = async () => {
+      await DB.auth.cerrar();
+      sesionActual = null;
+      location.hash = '';
+      showLogin();
+    };
     const shell = $('#shell');
     const menuBtn = $('#admin-menu');
     const cerrarMenu = () => { shell.classList.remove('menu-open'); menuBtn.setAttribute('aria-expanded', 'false'); };
@@ -124,7 +292,7 @@
   const pl = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
   const head = (title, sub, actions = '') => `<div class="page-head"><div><h1 class="h2">${title}</h1><p class="body muted">${sub}</p></div><div class="page-actions">${actions}</div></div>`;
   const errMsg = (e, fallback) => (e && e.code === 'SIN_PERMISO') ? e.message : fallback;
-  const avisoPermisos = () => st.sinAdmin ? `<div class="alert alert-warning" role="alert">${icon('lock', 20, '#D97706')}<div><b>Conectado a Supabase sin sesión de administrador</b>Por seguridad, la base de datos no entrega los datos de los clientes ni acepta cambios con la contraseña de este panel. Para administrar con Supabase se necesita iniciar sesión con Supabase Auth (ver supabase/schema.sql, sección 7). En modo demo todo funciona sin restricciones.</div></div>` : '';
+  const avisoPermisos = () => st.sinAdmin ? `<div class="alert alert-warning" role="alert">${icon('lock', 20, '#D97706')}<div><b>Sesión sin permisos de administrador</b>La base de datos no entrega datos de clientes ni acepta cambios. La cuenta debe estar en la tabla <code>administradores</code> (supabase/schema.sql, sección 7).</div></div>` : '';
   function bannerCarga() {
     const e = st.cargaError;
     if (!e) return '';

@@ -35,12 +35,17 @@
       <form class="login-card" id="login-form" data-testid="login-form" novalidate>
         <div class="center">
           <span class="logo-box"><i data-cone="54"></i></span>
-          <div><h2 class="h3">Panel de administración</h2><p class="body-sm muted">Ingresa la contraseña para continuar</p></div>
+          <div><h2 class="h3">Panel de administración</h2><p class="body-sm muted" id="login-ayuda">Ingresa la contraseña para continuar</p></div>
         </div>
         <div id="login-alert" data-testid="login-alert"></div>
+        <div class="field" id="f-email">
+          <label class="field-label" for="i-email">Correo electrónico</label>
+          <div class="input"><i data-icon="mail" data-size="18"></i><input id="i-email" data-testid="login-email" type="email" autocomplete="username" inputmode="email" placeholder="admin@konys.com" aria-describedby="login-email-error" aria-invalid="false" required></div>
+          <div class="helper is-error" id="login-email-error" data-testid="login-email-error" hidden></div>
+        </div>
         <div class="field" id="f-pass">
           <label class="field-label" for="i-pass">Contraseña</label>
-          <div class="input"><i data-icon="lock" data-size="18"></i><input id="i-pass" data-testid="login-password" type="password" autocomplete="current-password" placeholder="••••••••" aria-describedby="login-pass-error" aria-invalid="false" required autofocus><button type="button" id="toggle-pass" data-testid="login-ver-password" aria-label="Mostrar contraseña" aria-pressed="false" style="display:flex;color:var(--gray-400)"><i data-icon="eye" data-size="18"></i></button></div>
+          <div class="input"><i data-icon="lock" data-size="18"></i><input id="i-pass" data-testid="login-password" type="password" autocomplete="current-password" placeholder="••••••••" aria-describedby="login-pass-error" aria-invalid="false" required><button type="button" id="toggle-pass" data-testid="login-ver-password" aria-label="Mostrar contraseña" aria-pressed="false" style="display:flex;color:var(--gray-400)"><i data-icon="eye" data-size="18"></i></button></div>
           <div class="helper is-error" id="login-pass-error" data-testid="login-pass-error" hidden></div>
         </div>
         <button type="submit" class="btn btn-primary btn-lg btn-block" data-testid="login-submit">Ingresar<i data-icon="arrowr" data-size="18"></i></button>
@@ -65,7 +70,7 @@
         </nav>
       </div>
       <div style="display:flex;flex-direction:column;gap:14px">
-        <div class="side-user"><span class="avatar" style="background:var(--orange);color:#fff">AD</span><div style="display:flex;flex-direction:column"><b class="label">Administrador</b><span class="caption" style="color:rgba(255,255,255,.5)">Konys Pizza</span></div></div>
+        <div class="side-user"><span class="avatar" id="admin-avatar" style="background:var(--orange);color:#fff">AD</span><div style="display:flex;flex-direction:column;min-width:0"><b class="label" id="admin-user-name">Administrador</b><span class="caption" id="admin-user-email" style="color:rgba(255,255,255,.5);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Konys Pizza</span></div></div>
         <button class="btn btn-ghost-light btn-block" id="logout" data-testid="admin-logout" style="height:44px"><i data-icon="logout" data-size="16"></i>Cerrar sesión</button>
       </div>
     </aside>
@@ -90,11 +95,11 @@
   <div class="overlay" id="admin-modal" hidden role="dialog" aria-modal="true"><div class="modal" id="admin-modal-box"></div></div>
 
   <script src="js/config.js" onerror="window.KONYS_CONFIG = window.KONYS_CONFIG || {}"></script>
+  <script src="js/admin-config.js" onerror="window.KONYS_CONFIG = window.KONYS_CONFIG || {}"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/validacion.js"></script>
   <script src="js/supabase.js"></script>
-  <script src="js/admin-config.js"></script>
   <script src="js/admin.js"></script>
 </body>
 </html>

@@ -1,5 +1,5 @@
 # Esta carpeta es la raíz del repositorio.
-# Los genera scripts/build-config.js. Pueden traer la URL, la anon key o la contraseña del panel.
+# Los genera scripts/build-config.js. Pueden traer la URL y la anon key.
 .env
 .env.local
 .env.*.local

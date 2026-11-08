@@ -18,7 +18,16 @@
     console.warn('Konys: config.js tiene URL y clave, pero el SDK de Supabase no cargó. Se usa modo demo.');
   }
   const hasSupabase = !!(CFG.SUPABASE_URL && CFG.SUPABASE_ANON_KEY && sdkListo);
-  const sb = hasSupabase ? window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY) : null;
+  /* El panel y la página pública no comparten sesión: el visitante sigue como anon. */
+  const enPanel = !!(document.body && document.body.classList.contains('admin-body'));
+  const sb = hasSupabase ? window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY, {
+    auth: {
+      persistSession: enPanel,
+      autoRefreshToken: enPanel,
+      detectSessionInUrl: false,
+      storageKey: enPanel ? 'konys-admin-auth' : 'konys-public-auth',
+    },
+  }) : null;
   const { isoDate, toMin, fromMin, hhmm } = window.KUI;
 
   /** Error con código para que la interfaz muestre el estado correcto. */
@@ -28,6 +37,7 @@
   /* MODO DEMO (localStorage)                                            */
   /* ------------------------------------------------------------------ */
   const KEY = 'konys-demo-v1';
+
   function seed() {
     const now = new Date().toISOString();
     const mesas = [
@@ -65,22 +75,60 @@
     ];
     return { mesas, horarios, platos, reservas, seq: { mesas: 6, platos: 9, reservas: 13 } };
   }
-  const load = () => { try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.mesas) return s; } catch (e) { /* sin acceso */ } const s = seed(); save(s); return s; };
+  /** Conserva datos demo ya guardados y descarta cuentas de un intento anterior. */
+  function migrar(s) {
+    if (!Array.isArray(s.reservas)) s.reservas = [];
+    s.reservas.forEach((r) => { if (r && Object.prototype.hasOwnProperty.call(r, 'usuario_id')) delete r.usuario_id; });
+    delete s.cuentas;
+    s.seq = s.seq || { mesas: 6, platos: 9, reservas: 13 };
+    return s;
+  }
+  const load = () => {
+    try {
+      const s = JSON.parse(localStorage.getItem(KEY));
+      if (s && s.mesas) return migrar(s);
+    } catch (e) { /* sin acceso */ }
+    const s = seed(); save(s); return s;
+  };
   const save = (s) => { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) { /* modo privado */ } };
   const clone = (x) => JSON.parse(JSON.stringify(x));
   const delay = (v) => new Promise(res => setTimeout(() => res(clone(v)), 120)); // simula red
   const V = () => window.KVal;
 
-  /* La contraseña solo oculta el panel. En demo, leer datos personales o
-     escribir mesas/horarios/platos vuelve a comprobar la misma sesión. */
+  /* ------------------------------------------------------------------ */
+  /* Sesión del panel en modo demo                                       */
+  /* La contraseña no está aquí: admin.js la compara y llama abrir().    */
+  /* index.html no carga admin.js ni admin-config.js.                    */
+  /* ------------------------------------------------------------------ */
+  const SIN_PERMISO_DEMO = 'Inicia sesión en el panel para ver o cambiar esta información.';
   function sesionAdmin() {
     try { return sessionStorage.getItem(V().SESION_ADMIN) === '1'; }
     catch (e) { return false; }
   }
-  const SIN_PERMISO_DEMO = 'Inicia sesión en el panel para ver o cambiar esta información.';
   function exigeAdmin() {
     if (!sesionAdmin()) throw new ReservaError('SIN_PERMISO', SIN_PERMISO_DEMO);
   }
+  const authDemo = {
+    modo: 'demo',
+    aviso: '',
+    /** La abre el panel después de aceptar la contraseña local. */
+    async abrir() {
+      try { sessionStorage.setItem(V().SESION_ADMIN, '1'); } catch (e) { /* modo privado */ }
+      return { rol: 'admin', nombre: 'Administrador', email: '' };
+    },
+    async login() {
+      throw new ReservaError('AUTH', 'En modo demo el panel usa la contraseña local, no un usuario de Supabase.');
+    },
+    async sesion() {
+      return sesionAdmin() ? { rol: 'admin', nombre: 'Administrador', email: '' } : null;
+    },
+    async refrescar() { return authDemo.sesion(); },
+    async cerrar() {
+      try { sessionStorage.removeItem(V().SESION_ADMIN); } catch (e) { /* sin acceso */ }
+    },
+    async esAdmin() { return sesionAdmin(); },
+  };
+
   function rechazar(mapa) {
     const msg = V().primerError(mapa);
     if (msg) throw new ReservaError('DATOS_INVALIDOS', msg);
@@ -234,14 +282,102 @@
       return okFilas(await sb.from('reservas').update({ estado }).eq('id', id).select());
     },
     /** ¿La sesión actual es de un administrador registrado en public.administradores? */
-    async esAdmin() { const { data, error } = await sb.rpc('es_admin'); return !error && data === true; },
+    async esAdmin() { return usuarioEsAdmin(); },
     async reset() { return false; },
+  };
+
+  /* ------------------------------------------------------------------ */
+  /* Sesión de administrador con Supabase Auth                           */
+  /* El JWT de esta sesión viaja en las peticiones del mismo cliente,    */
+  /* así RLS aplica. No se usa la contraseña demo ni la secret key.      */
+  /* ------------------------------------------------------------------ */
+  function mensajeAuth(error) {
+    const texto = `${(error && error.code) || ''} ${(error && error.message) || ''}`;
+    if (/invalid_credentials|invalid login|invalid credentials|invalid email or password/i.test(texto)) {
+      return new ReservaError('CREDENCIALES', 'Correo o contraseña incorrectos.');
+    }
+    if (/email_not_confirmed|email not confirmed/i.test(texto)) {
+      return new ReservaError('CREDENCIALES', 'Confirma el correo en Supabase antes de entrar al panel.');
+    }
+    if (/over_request_rate_limit|too many requests|rate limit/i.test(texto)) {
+      return new ReservaError('BLOQUEO', 'Demasiados intentos. Espera un momento e inténtalo de nuevo.');
+    }
+    return new ReservaError('AUTH', 'No pudimos iniciar sesión. Revisa la conexión e inténtalo de nuevo.');
+  }
+
+  function perfilAdmin(user) {
+    return { rol: 'admin', uid: user.id, email: user.email || '', nombre: 'Administrador' };
+  }
+
+  async function cerrarAuth() {
+    try { await sb.auth.signOut(); } catch (e) { /* red */ }
+  }
+
+  /**
+   * Comprueba que el usuario de la sesión esté en public.administradores.
+   * Primero lee su propia fila (política SELECT). Si esa política aún no
+   * está aplicada, usa es_admin(), que es security definer.
+   */
+  async function usuarioEsAdmin() {
+    const { data: sesion, error: sesErr } = await sb.auth.getSession();
+    if (sesErr) throw sesErr;
+    const user = sesion && sesion.session && sesion.session.user;
+    if (!user) return false;
+    const fila = await sb.from('administradores').select('user_id').eq('user_id', user.id).maybeSingle();
+    if (!fila.error && fila.data && fila.data.user_id === user.id) return true;
+    if (fila.error && !esPermiso(fila.error)) throw fila.error;
+    const { data, error } = await sb.rpc('es_admin');
+    if (error) {
+      if (esPermiso(error)) return false;
+      throw error;
+    }
+    return data === true;
+  }
+
+  const authLive = {
+    modo: 'supabase',
+    aviso: '',
+    async login(email, password) {
+      authLive.aviso = '';
+      const em = V().emailLimpio(email);
+      const { data, error } = await sb.auth.signInWithPassword({ email: em, password: String(password) });
+      if (error || !data || !data.user) throw mensajeAuth(error);
+      let es;
+      try {
+        es = await usuarioEsAdmin();
+      } catch (e) {
+        await cerrarAuth();
+        throw new ReservaError('AUTH', 'Entraste, pero no pudimos comprobar si eres administrador. Inténtalo de nuevo.');
+      }
+      if (!es) {
+        await cerrarAuth();
+        throw new ReservaError('SIN_PERMISO', 'Esta cuenta no está registrada como administrador.');
+      }
+      return perfilAdmin(data.user);
+    },
+    async sesion() {
+      const { data, error } = await sb.auth.getSession();
+      if (error) throw error;
+      if (!data.session || !data.session.user) return null;
+      const es = await usuarioEsAdmin();
+      if (!es) {
+        await cerrarAuth();
+        authLive.aviso = 'Esta cuenta no está registrada como administrador.';
+        return null;
+      }
+      authLive.aviso = '';
+      return perfilAdmin(data.session.user);
+    },
+    async refrescar() { return authLive.sesion(); },
+    async cerrar() { authLive.aviso = ''; await cerrarAuth(); },
+    async esAdmin() { return usuarioEsAdmin(); },
   };
   demo.listOcupacion = async ({ fecha, mesa_id } = {}) => delay(filtrarReservas(load().reservas, { fecha, mesa_id })
     .filter(r => r.estado !== 'cancelada').map(({ mesa_id: m, fecha: f, hora_inicio, hora_fin, estado }) => ({ mesa_id: m, fecha: f, hora_inicio, hora_fin, estado })));
   demo.esAdmin = async () => sesionAdmin();
 
   const api = hasSupabase ? live : demo;
+  const auth = hasSupabase ? authLive : authDemo;
 
   /**
    * Crea una reserva aplicando las reglas del documento:
@@ -282,5 +418,5 @@
     }));
   }
 
-  window.DB = { mode: hasSupabase ? 'supabase' : 'demo', ReservaError, crearReserva, ...api };
+  window.DB = { mode: hasSupabase ? 'supabase' : 'demo', ReservaError, crearReserva, auth, ...api };
 })();

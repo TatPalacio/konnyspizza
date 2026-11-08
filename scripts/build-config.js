@@ -50,19 +50,19 @@ const banner = `/* Generado por scripts/build-config.js.
    Origen: process.env (Vercel) o, en local, el archivo .env de esta carpeta.
    SUPABASE_URL vacío = modo demo (localStorage). No subas este archivo con claves.
    La contraseña del panel NO va aquí: se escribe en js/admin-config.js y solo la carga admin.html.
-   Nunca pongas la service_role key. */
+   No es el usuario de Supabase Auth. Nunca pongas la service_role key. */
 `;
 fs.writeFileSync(outPath, `${banner}window.KONYS_CONFIG = ${JSON.stringify(cfg, null, 2)};\n`);
 
 /* Archivo aparte: index.html no lo pide, así la página pública no recibe la contraseña. */
 const adminPath = path.join(appDir, 'js', 'admin-config.js');
 const adminBanner = `/* Generado por scripts/build-config.js. Solo lo carga admin.html.
-   Oculta el panel; no sustituye a Supabase Auth. No lo incluyas en la página pública.
+   Contraseña local del modo demo. No sustituye a Supabase Auth ni es ese usuario.
    Si cambias la contraseña, no subas este archivo a un repositorio público. */
 `;
 fs.writeFileSync(adminPath, `${adminBanner}window.KONYS_CONFIG = Object.assign(window.KONYS_CONFIG || {}, ${JSON.stringify({ ADMIN_PASSWORD: adminPassword })});\n`);
 
-const modo = cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY ? 'Supabase configurado' : 'modo demo (faltan SUPABASE_URL o SUPABASE_ANON_KEY)';
+const modo = cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY ? 'Supabase Auth + base de datos configurados' : 'modo demo (faltan SUPABASE_URL o SUPABASE_ANON_KEY)';
 console.log('js/config.js generado:', modo);
 console.log('js/admin-config.js generado (la contraseña no se imprime).');
 if (cfg.SUPABASE_URL || cfg.SUPABASE_ANON_KEY) {

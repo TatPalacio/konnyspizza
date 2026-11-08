@@ -8,6 +8,7 @@
   'use strict';
   const U = () => window.KUI;
   const NOMBRE = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ' .-]+$/;
+  const EMAIL = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
   const HORA = /^([01]\d|2[0-3]):[0-5]\d$/;
   const DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
   const ZONAS = ['terraza', 'salon'];
@@ -19,6 +20,7 @@
     const d = String(v ?? '').replace(/\D/g, '');
     return d ? d : null;
   };
+  const emailLimpio = (v) => String(v ?? '').trim().toLowerCase();
   const primerError = (mapa) => Object.values(mapa || {}).find(Boolean) || '';
   const tiene = (obj, key) => Object.prototype.hasOwnProperty.call(obj || {}, key);
 
@@ -43,6 +45,16 @@
     else if (!r.capacidad && n > 12) e.personas = 'Ninguna mesa admite más de 12 personas';
 
     if (!r.hora) e.hora = 'Selecciona un horario para continuar';
+    return e;
+  }
+
+  /** Validación del formulario de ingreso (solo campos, sin revelar si la cuenta existe). */
+  function erroresLogin({ email, password } = {}) {
+    const e = {};
+    const em = emailLimpio(email);
+    if (!em) e.email = 'Ingresa tu correo';
+    else if (!EMAIL.test(em)) e.email = 'Ingresa un correo válido';
+    if (!password) e.password = 'Ingresa tu contraseña';
     return e;
   }
 
@@ -192,11 +204,13 @@
     SESION_ADMIN: 'konys-admin-session',
     ESTADOS_RESERVA,
     erroresReserva,
+    erroresLogin,
     evaluarReserva,
     erroresMesa,
     erroresPlato,
     erroresHorarios,
     contactoLimpio,
+    emailLimpio,
     recortarMesa,
     recortarPlato,
     primerError,
