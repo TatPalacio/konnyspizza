@@ -1,8 +1,10 @@
 # Esta carpeta es la raíz del repositorio.
-# No ignorar js/config.js: el sitio estático lo necesita para abrirse sin build.
+# Los genera scripts/build-config.js. Pueden traer la URL, la anon key o la contraseña del panel.
 .env
 .env.local
 .env.*.local
+js/config.js
+js/admin-config.js
 
 .vercel
 node_modules
