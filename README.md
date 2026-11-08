@@ -51,7 +51,7 @@ konys-reservas-app/
 
 ## Ejecutar en local
 
-El modo demo no necesita claves. `js/config.js` ya está en el repositorio con `SUPABASE_URL` y `SUPABASE_ANON_KEY` vacías. La contraseña del panel está en `js/admin-config.js`, que la página pública no carga.
+El modo demo no necesita claves. `scripts/build-config.js` genera `js/config.js` desde `.env` o las variables del entorno; sin URL ni clave pública, la aplicación usa datos de prueba locales. `js/config.js` y `js/admin-config.js` están excluidos de Git. La contraseña demo solo la carga `admin.html`.
 
 1. Abre esta carpeta.
 2. Abre `index.html` en el navegador (doble clic) o sírvela con un servidor estático.
@@ -67,7 +67,7 @@ Si `SUPABASE_URL` está vacío, la app funciona en **modo demo**: usa datos de e
 3. Desde esta carpeta ejecuta `node scripts/build-config.js`. El script reescribe `js/config.js` (página pública, sin contraseña) y `js/admin-config.js` (solo el panel).
 4. Recarga `index.html`. Si las dos claves de Supabase tienen valor, desaparece el modo demo y el panel pide correo y contraseña de Authentication.
 
-`.env` no se sube a Git. `js/config.js` sí, pero solo como plantilla vacía: si el script escribió claves, no lo commitees así.
+`.env`, `js/config.js` y `js/admin-config.js` no se suben a Git. El script genera la configuración local; no agregues esos archivos al repositorio.
 
 ## Conectar Supabase
 
@@ -85,13 +85,13 @@ Si `SUPABASE_URL` está vacío, la app funciona en **modo demo**: usa datos de e
 
 ## Desplegar en Vercel
 
-1. Sube el repositorio a GitHub. `.env` queda fuera por `.gitignore`. `js/config.js` sí va, con las claves vacías.
+1. Sube el repositorio a GitHub. `.env`, `js/config.js` y `js/admin-config.js` quedan fuera por `.gitignore`; Vercel genera los archivos de configuración durante el build.
 2. En Vercel: **Add New → Project →** importa el repositorio (framework: *Other*).
-3. En **Settings → General → Root Directory** elige `konys-reservas-appw/konys-reservas-app`. Si la raíz queda en el repo, Vercel no ve `index.html` ni `vercel.json`.
+3. En **Settings → General → Root Directory** deja `.` (la raíz del repositorio), donde ya están `index.html` y `vercel.json`.
 4. En **Settings → Environment Variables** agrega `SUPABASE_URL` y `SUPABASE_ANON_KEY`. `ADMIN_PASSWORD` es opcional y solo cambia la contraseña del modo demo.
 5. Vercel ejecuta `node scripts/build-config.js`. En el build manda `process.env` (no hace falta subir `.env`) y reescribe `js/config.js` y `js/admin-config.js`. El panel queda disponible en `/admin`. `vercel.json` añade cabeceras de seguridad (nosniff, anti-clickjacking y una CSP compatible con fuentes, el SDK y Supabase).
 
-> La clave *anon* de Supabase es pública por diseño: la protección real la dan las reglas RLS de `schema.sql`. No uses nunca la *service_role key* en el front-end.
+> La clave *anon* de Supabase es pública por diseño: la protección real la dan las reglas RLS de `schema.sql`. No uses nunca la *service_role key* en el front-end. Los nombres y perfiles de Instagram/Facebook del pie son ficticios para la demostración; reemplázalos antes de publicar como canales reales.
 
 ## Funcionalidades (trazabilidad)
 
