@@ -128,10 +128,20 @@
   function svg200(inner) { return `<svg viewBox="0 0 200 200">${inner}</svg>`; }
   const DEFAULT_ART = { pizzas: 'pizza-pepperoni', entradas: 'palitos', postres: 'brownie', bebidas: 'limonada' };
 
+  /** Solo http(s). Rechaza javascript:, data: y rutas de protocolo relativo. */
+  function urlSegura(v) {
+    const s = String(v || '').trim();
+    if (!/^https?:\/\//i.test(s)) return false;
+    try {
+      const u = new URL(s);
+      return u.protocol === 'http:' || u.protocol === 'https:';
+    } catch (e) { return false; }
+  }
+
   /** Imagen de un plato: URL propia (si el admin la cargó) o la ilustración de marca. */
   function platoImg(plato, extraClass = '') {
     const ref = (plato && plato.imagen) || DEFAULT_ART[plato && plato.categoria] || 'pizza-pepperoni';
-    if (/^https?:\/\//.test(ref)) return `<div class="media ${extraClass}"><img src="${esc(ref)}" alt="${esc(plato.nombre)}" loading="lazy"></div>`;
+    if (urlSegura(ref)) return `<div class="media ${extraClass}"><img src="${esc(ref)}" alt="${esc(plato.nombre)}" loading="lazy"></div>`;
     const art = PLATO_ART[ref] || PLATO_ART['pizza-pepperoni'];
     return `<div class="media media-art ${extraClass}" style="background:${art.bg}">${art.svg()}</div>`;
   }
@@ -165,7 +175,7 @@
   }
   /** Foto de la mesa: usa foto_url si existe; si no, la ilustración. */
   function mesaImg(mesa, extraClass = '') {
-    if (mesa && mesa.foto_url) return `<div class="media ${extraClass}"><img src="${esc(mesa.foto_url)}" alt="${esc(mesa.nombre)}" loading="lazy"></div>`;
+    if (mesa && urlSegura(mesa.foto_url)) return `<div class="media ${extraClass}"><img src="${esc(mesa.foto_url)}" alt="${esc(mesa.nombre)}" loading="lazy"></div>`;
     return `<div class="media media-art media-fill ${extraClass}">${tableArt(mesa.zona, mesa.capacidad)}</div>`;
   }
 
@@ -240,6 +250,9 @@
     if (!box) { box = document.createElement('div'); box.className = 'toasts'; box.setAttribute('role', 'status'); document.body.appendChild(box); }
     const el = document.createElement('div');
     el.className = `toast toast-${type}`;
+    el.setAttribute('data-testid', 'toast');
+    el.setAttribute('data-toast', type);
+    el.setAttribute('role', type === 'error' ? 'alert' : 'status');
     el.innerHTML = `${icon(type === 'error' ? 'alertc' : type === 'info' ? 'info' : 'checkc', 20)}<span>${esc(msg)}</span>`;
     box.appendChild(el);
     setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 300); }, 3600);
@@ -257,7 +270,7 @@
   }
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') document.querySelectorAll('.overlay.open').forEach(o => o.dispatchEvent(new CustomEvent('modal:close'))); });
 
-  window.KUI = { C, icon, coneMark, coneArt, tableArt, mesaImg, platoImg, PLATO_ART, heroArt, successArt, emptyArt, esc, cop, DIAS, DIAS_CORTOS, MESES, pad, isoDate, parseDate, fechaCorta, fechaLarga, fechaNum, hhmm, toMin, fromMin, nowMin, hora12, initials, zonaTxt, zonaIcon, CATS, codigoReserva, generarSlots, diaAbierto, chip, toast, openModal, closeModal };
+  window.KUI = { C, icon, coneMark, coneArt, tableArt, mesaImg, platoImg, PLATO_ART, heroArt, successArt, emptyArt, esc, urlSegura, cop, DIAS, DIAS_CORTOS, MESES, pad, isoDate, parseDate, fechaCorta, fechaLarga, fechaNum, hhmm, toMin, fromMin, nowMin, hora12, initials, zonaTxt, zonaIcon, CATS, codigoReserva, generarSlots, diaAbierto, chip, toast, openModal, closeModal };
 
   /* Hidrata iconos declarados en HTML: <i data-icon="calendar" data-size="18"></i> */
   function hydrateIcons(root = document) {
