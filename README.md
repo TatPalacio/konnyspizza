@@ -15,6 +15,8 @@ Proyecto académico · Universidad de Santander.
 | Supabase (SDK JS v2) | Base de datos: mesas, horarios, reservas y platos |
 | Vercel | Despliegue continuo desde GitHub |
 | Figma | Diseño de alta fidelidad (`KONYS.fig`) |
+| Python 3 + Selenium WebDriver | Pruebas automáticas end-to-end en Chrome o Edge |
+| ReportLab | Generación del reporte PDF de las pruebas |
 
 ## Estructura
 
@@ -33,8 +35,15 @@ konys-reservas-app/
 │   └── admin.js          # Lógica del módulo administrador
 ├── supabase/schema.sql   # Tablas, reglas RLS, índice anti doble reserva y datos iniciales
 ├── scripts/build-config.js # Vuelca .env o las variables de Vercel a js/config.js
+├── pruebas/
+│   ├── pruebas_reservas.py # Suite de 30 pruebas Selenium + servidor local en modo demo
+│   ├── reporte_pdf.py      # Generador del reporte PDF (portada, resumen y detalles)
+│   └── requirements.txt    # selenium, reportlab
+├── ejecutar_pruebas.bat  # Lanzador de Windows: instala dependencias si faltan y ejecuta
 ├── .env.example          # Plantilla de variables (copiar como .env)
-├── docs/                 # Documento de proyecto
+├── docs/
+│   ├── Documento-Proyecto.pdf
+│   └── capturas/         # Capturas de la app y portada del reporte para este README
 ├── vercel.json
 └── .gitignore            # Ignora .env, no js/config.js
 ```
@@ -104,6 +113,113 @@ Si `SUPABASE_URL` está vacío, la app funciona en **modo demo**: usa datos de e
 
 **Responsive:** escritorio (≥ 1280 px), portátil, tablet (≤ 1023 px: menú hamburguesa y panel lateral desplegable) y móvil (≤ 639 px: tarjetas horizontales, reserva a pantalla completa con botón fijo, tablas con desplazamiento).
 
+## Pruebas automatizadas (Selenium)
+
+El proyecto incluye una suite de **30 pruebas end-to-end** con **Python + Selenium WebDriver** que recorre la página pública y el panel de administración, y genera un **reporte PDF** con portada, resumen y una ficha con captura por cada prueba.
+
+Las pruebas levantan su propio servidor HTTP local y fuerzan el **modo demo**, así que no necesitan Supabase, claves ni conexión a internet. El navegador se detecta automáticamente: usa Chrome si está instalado y, si no, Microsoft Edge.
+
+### Requisitos
+
+- Python 3.8 o superior.
+- Google Chrome o Microsoft Edge (Selenium 4 descarga el driver con Selenium Manager si hace falta).
+- Dependencias de `pruebas/requirements.txt`: `selenium` y `reportlab`.
+
+```bash
+python -m pip install -r pruebas/requirements.txt
+```
+
+### Ejecución
+
+Desde la raíz del proyecto:
+
+```bash
+# Windows: instala las dependencias si faltan y ejecuta las 30 pruebas
+ejecutar_pruebas.bat
+
+# O directamente con Python
+python pruebas/pruebas_reservas.py
+
+# Ejecución rápida y sin ventana (ideal para comprobar cambios o para CI)
+python pruebas/pruebas_reservas.py --rapido --oculto --sin-abrir
+```
+
+| Opción | Efecto |
+|---|---|
+| `--rapido` | Quita las pausas y el efecto de tecleo. |
+| `--oculto` | Ejecuta el navegador en modo headless. |
+| `--sin-abrir` | No abre el PDF automáticamente al terminar. |
+| `--navegador chrome` / `--navegador edge` | Fuerza un navegador concreto. |
+
+El programa devuelve `0` si todas las pruebas pasan, `1` si hay fallos y `3` si no se pudo generar el reporte.
+
+### Qué se prueba
+
+| # | Grupo | Prueba | Verifica |
+|---|---|---|---|
+| 01 | Carga | La página principal carga | 4 mesas activas y el título de Konys Pizza. |
+| 02 | Carga | Estilos y scripts disponibles | CSS, utilidades, validaciones y capa de datos cargadas en modo demo. |
+| 03 | Carga | Carta y etiqueta de modo demo | 8 platos visibles y la etiqueta «Modo demo». |
+| 04 | Carga | Cuadrícula de escritorio | Las mesas se distribuyen en 4 columnas a 1440 px. |
+| 05 | Mesas | Filtro Terraza | Quedan 2 mesas, todas de Terraza. |
+| 06 | Mesas | Filtro Salón | Quedan 2 mesas, todas de Salón. |
+| 07 | Mesas | Mesas inactivas ocultas | La Mesa 5 (inactiva) nunca se muestra. |
+| 08 | Carta | Filtro Pizzas | La categoría muestra 4 platos con su etiqueta. |
+| 09 | Carta | Filtro Bebidas | La categoría muestra Limonada y Gaseosa. |
+| 10 | Carta | Precio en pesos colombianos | La Pizza Konys Especial muestra $34.000. |
+| 11 | Validaciones | Reserva con campos vacíos | Errores de nombre, personas y hora, sin registrar. |
+| 12 | Validaciones | Nombre con números | «Ana 123» se rechaza: solo letras y espacios. |
+| 13 | Validaciones | Nombre demasiado corto | «Al» se rechaza por tener menos de 3 letras. |
+| 14 | Validaciones | Teléfono incompleto | «300 12» se rechaza por no tener 10 dígitos. |
+| 15 | Validaciones | Cero personas | No se permite reservar con 0 personas. |
+| 16 | Validaciones | Capacidad excedida | La Mesa 1 (capacidad 2) bloquea una reserva de 3. |
+| 17 | Comportamiento | Teléfono con espacios | «300 123 4567» se normaliza y permite confirmar. |
+| 18 | Comportamiento | El error desaparece al corregir | El mensaje se oculta al escribir un nombre válido. |
+| 19 | Comportamiento | Botones + y - de personas | El contador aumenta y disminuye correctamente. |
+| 20 | Comportamiento | Cerrar el modal con Esc | El modal de reserva se cierra con la tecla Esc. |
+| 21 | Registro | Reserva exitosa | Se confirma con un código `KNY-AAAA-NNNN`. |
+| 22 | Registro | Resumen de la confirmación | Muestra cliente, mesa, zona, personas, fecha y hora. |
+| 23 | Registro | Volver al inicio | Oculta la confirmación y restaura la página. |
+| 24 | Registro | Prevención de doble reserva | El horario reservado queda ocupado al reabrir la mesa. |
+| 25 | Seguridad | HTML mostrado como texto | Un nombre con HTML se escapa y no se ejecuta. |
+| 26 | Celular | Diseño a 375 px | La cuadrícula pasa a 1 columna y el menú hamburguesa funciona. |
+| 27 | Administración | Contraseña incorrecta | El panel rechaza la clave y permanece en el login. |
+| 28 | Administración | Acceso al panel | La clave correcta abre el Resumen con sus 5 secciones. |
+| 29 | Administración | Crear una mesa | La mesa creada aparece en la tabla del panel. |
+| 30 | Administración | Buscar y ocultar un plato | El plato oculto desaparece de la carta pública. |
+
+### Reporte PDF
+
+Cada ejecución crea una carpeta con fecha y hora:
+
+```
+pruebas/reportes/
+├── reporte_pruebas_AAAA-MM-DD_HH-MM-SS.pdf
+└── capturas_AAAA-MM-DD_HH-MM-SS/
+    ├── 01_la_pagina_principal_carga.png
+    ├── 02_estilos_y_scripts_disponibles.png
+    └── ...
+```
+
+El PDF contiene:
+
+1. **Portada** con el resultado general, los totales (pruebas, aprobadas, fallidas, omitidas y porcentaje de éxito) y el entorno de ejecución (navegador, versión de Selenium, Python, sistema operativo, resolución, modo, velocidad y duración).
+2. **Tabla resumen** con las 30 pruebas, su grupo, resultado y tiempo, más un resumen por grupo.
+3. **Detalle** de cada prueba con lo que se esperaba, lo que se obtuvo y la captura tomada automáticamente.
+
+Si PyMuPDF está instalado, la suite también guarda la portada del reporte en `docs/capturas/reporte.png` para este README. La carpeta `pruebas/reportes/` es un artefacto generado y no se versiona.
+
+### Capturas de la aplicación
+
+| Escritorio | Móvil |
+|---|---|
+| ![Página principal](docs/capturas/pagina-principal.png) | ![Diseño móvil](docs/capturas/celular.png) |
+| ![Mesas y filtros](docs/capturas/mesas.png) | ![Carta por categorías](docs/capturas/carta.png) |
+| ![Validaciones del formulario](docs/capturas/validaciones.png) | ![Formulario de reserva](docs/capturas/reserva.png) |
+| ![Confirmación de la reserva](docs/capturas/confirmacion.png) | ![Panel de administración](docs/capturas/admin.png) |
+
+![Portada del reporte de pruebas](docs/capturas/reporte.png)
+
 ## Decisiones fuera del documento
 
 - La tabla `platos` incluye una columna opcional `imagen` (URL o clave de ilustración) para mostrar la imagen del diseño de Figma. El modelo del documento no la define.
@@ -120,3 +236,4 @@ Si `SUPABASE_URL` está vacío, la app funciona en **modo demo**: usa datos de e
 6. `feat: panel de administración (mesas, horarios, reservas, carta)`
 7. `fix: validación de doble reserva y responsividad`
 8. `chore: configuración de despliegue en Vercel`
+9. `test: suite de 30 pruebas Selenium y reporte PDF`
