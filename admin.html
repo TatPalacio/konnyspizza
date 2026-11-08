@@ -3,6 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://cdn.jsdelivr.net https://fonts.googleapis.com https://fonts.gstatic.com https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:">
   <title>Konys Admin · Panel de administración</title>
   <meta name="robots" content="noindex">
   <meta name="theme-color" content="#641C23">
@@ -13,9 +15,10 @@
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body class="admin-body">
+  <noscript><p class="alert alert-error" data-testid="sin-js" style="margin:16px">Activa JavaScript para entrar al panel.</p></noscript>
 
   <!-- ===================== Acceso (RF-08 · Figma 7.1 / 7.2) ===================== -->
-  <section class="login" id="login" hidden>
+  <section class="login" id="login" data-testid="login" hidden>
     <aside class="login-side">
       <span class="brand white"><i data-cone="46"></i><span class="brand-name"><b>KONYS</b><small>PIZZA</small></span></span>
       <div style="display:flex;flex-direction:column;gap:28px">
@@ -29,18 +32,18 @@
       <span class="caption" style="color:rgba(255,255,255,.4)">© 2026 Konys Pizza · Uso exclusivo del administrador</span>
     </aside>
     <div class="login-main">
-      <form class="login-card" id="login-form" novalidate>
+      <form class="login-card" id="login-form" data-testid="login-form" novalidate>
         <div class="center">
           <span class="logo-box"><i data-cone="54"></i></span>
           <div><h2 class="h3">Panel de administración</h2><p class="body-sm muted">Ingresa la contraseña para continuar</p></div>
         </div>
-        <div id="login-alert"></div>
+        <div id="login-alert" data-testid="login-alert"></div>
         <div class="field" id="f-pass">
           <label class="field-label" for="i-pass">Contraseña</label>
-          <div class="input"><i data-icon="lock" data-size="18"></i><input id="i-pass" type="password" autocomplete="current-password" placeholder="••••••••" autofocus><button type="button" id="toggle-pass" aria-label="Mostrar contraseña" style="display:flex;color:var(--gray-400)"><i data-icon="eye" data-size="18"></i></button></div>
-          <div class="helper is-error" hidden></div>
+          <div class="input"><i data-icon="lock" data-size="18"></i><input id="i-pass" data-testid="login-password" type="password" autocomplete="current-password" placeholder="••••••••" aria-describedby="login-pass-error" aria-invalid="false" required autofocus><button type="button" id="toggle-pass" data-testid="login-ver-password" aria-label="Mostrar contraseña" aria-pressed="false" style="display:flex;color:var(--gray-400)"><i data-icon="eye" data-size="18"></i></button></div>
+          <div class="helper is-error" id="login-pass-error" data-testid="login-pass-error" hidden></div>
         </div>
-        <button type="submit" class="btn btn-primary btn-lg btn-block">Ingresar<i data-icon="arrowr" data-size="18"></i></button>
+        <button type="submit" class="btn btn-primary btn-lg btn-block" data-testid="login-submit">Ingresar<i data-icon="arrowr" data-size="18"></i></button>
         <div class="divider"></div>
         <div class="login-foot"><a href="index.html"><i data-icon="arrowl" data-size="16"></i>Volver a la página principal</a><span class="caption muted" style="display:inline-flex;gap:6px;align-items:center"><i data-icon="shield" data-size="14"></i>/admin</span></div>
       </form>
@@ -48,29 +51,29 @@
   </section>
 
   <!-- ===================== Panel (Figma 8.x) ===================== -->
-  <div class="shell" id="shell" hidden>
+  <div class="shell" id="shell" data-testid="admin-panel" hidden>
     <aside class="sidebar" id="sidebar">
       <div>
         <span class="brand" style="padding:0 6px"><i data-cone="40"></i><span class="brand-name"><b>KONYS</b><small>ADMIN</small></span></span>
         <nav class="side-nav" aria-label="Secciones del panel">
           <span class="overline">Gestión</span>
-          <a class="side-item" href="#resumen" data-sec="resumen"><i data-icon="grid"></i>Resumen</a>
-          <a class="side-item" href="#reservas" data-sec="reservas"><i data-icon="calcheck"></i>Reservas<span class="badge" id="badge-res" hidden></span></a>
-          <a class="side-item" href="#mesas" data-sec="mesas"><i data-icon="table"></i>Mesas</a>
-          <a class="side-item" href="#horarios" data-sec="horarios"><i data-icon="clock"></i>Horarios</a>
-          <a class="side-item" href="#carta" data-sec="carta"><i data-icon="utensils"></i>Carta</a>
+          <a class="side-item" href="#resumen" data-sec="resumen" data-testid="nav-resumen"><i data-icon="grid"></i>Resumen</a>
+          <a class="side-item" href="#reservas" data-sec="reservas" data-testid="nav-reservas"><i data-icon="calcheck"></i>Reservas<span class="badge" id="badge-res" hidden></span></a>
+          <a class="side-item" href="#mesas" data-sec="mesas" data-testid="nav-mesas"><i data-icon="table"></i>Mesas</a>
+          <a class="side-item" href="#horarios" data-sec="horarios" data-testid="nav-horarios"><i data-icon="clock"></i>Horarios</a>
+          <a class="side-item" href="#carta" data-sec="carta" data-testid="nav-carta"><i data-icon="utensils"></i>Carta</a>
         </nav>
       </div>
       <div style="display:flex;flex-direction:column;gap:14px">
         <div class="side-user"><span class="avatar" style="background:var(--orange);color:#fff">AD</span><div style="display:flex;flex-direction:column"><b class="label">Administrador</b><span class="caption" style="color:rgba(255,255,255,.5)">Konys Pizza</span></div></div>
-        <button class="btn btn-ghost-light btn-block" id="logout" style="height:44px"><i data-icon="logout" data-size="16"></i>Cerrar sesión</button>
+        <button class="btn btn-ghost-light btn-block" id="logout" data-testid="admin-logout" style="height:44px"><i data-icon="logout" data-size="16"></i>Cerrar sesión</button>
       </div>
     </aside>
     <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
     <div class="main">
       <header class="topbar">
         <div style="display:flex;align-items:center;gap:12px">
-          <button class="btn btn-soft btn-icon admin-menu-btn" id="admin-menu" aria-label="Abrir menú"><i data-icon="menu"></i></button>
+          <button class="btn btn-soft btn-icon admin-menu-btn" id="admin-menu" data-testid="admin-menu" aria-label="Abrir menú" aria-controls="sidebar" aria-expanded="false"><i data-icon="menu"></i></button>
           <div class="crumbs">Panel <i data-icon="cr" data-size="14"></i> <b id="crumb">Resumen</b></div>
         </div>
         <div class="topbar-right">
@@ -79,7 +82,7 @@
           <a href="index.html" target="_blank" class="btn btn-ghost btn-sm ver-sitio"><span>Ver sitio</span><i data-icon="external" data-size="16"></i></a>
         </div>
       </header>
-      <main class="content" id="content" aria-live="polite"></main>
+      <main class="content" id="content" data-testid="admin-content" aria-live="polite"></main>
     </div>
   </div>
 
@@ -89,7 +92,9 @@
   <script src="js/config.js" onerror="window.KONYS_CONFIG = window.KONYS_CONFIG || {}"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
   <script src="js/ui.js"></script>
+  <script src="js/validacion.js"></script>
   <script src="js/supabase.js"></script>
+  <script src="js/admin-config.js"></script>
   <script src="js/admin.js"></script>
 </body>
 </html>
