@@ -4,19 +4,22 @@ Aplicación web para que los clientes de **Konys Pizza** (Cra. 36 con calle 41, 
 
 Proyecto académico · Universidad de Santander.
 
-- **Aplicación desplegada:** _pendiente (URL de Vercel)_
-- **Video explicativo:** _pendiente (enlace de YouTube o Drive)_
+- **Aplicación desplegada:** [konnyspizza.vercel.app](https://konnyspizza.vercel.app/)
+
+  - **Repositorio:** [github.com/TatPalacio/konnyspizza](https://github.com/TatPalacio/konnyspizza)
+  - Alta Fidelidad: [www.figma.com/design/k9bCjJf9eEqERlhiKUOau5/KONYS?node-id=0-1&amp;p=f&amp;t=Z97aw2LTZiFRyPVu-0](https://www.figma.com/design/k9bCjJf9eEqERlhiKUOau5/KONYS?node-id=0-1&p=f&t=Z97aw2LTZiFRyPVu-0)
+- Baja Fidelidad: [www.figma.com/design/n9hw43Ehc5KmZ0IsAp5uQF/Konys-Pizza---Sistema-de-Reservas?node-id=1-6&amp;p=f&amp;t=wvjkD8Rz43Eq5WDc-0](https://www.figma.com/design/n9hw43Ehc5KmZ0IsAp5uQF/Konys-Pizza---Sistema-de-Reservas?node-id=1-6&p=f&t=wvjkD8Rz43Eq5WDc-0)
 
 ## Tecnologías
 
-| Tecnología | Uso |
-|---|---|
+| Tecnología                            | Uso                                                |
+| -------------------------------------- | -------------------------------------------------- |
 | HTML5, CSS3, JavaScript ES6+ (vanilla) | Interfaz, estilos responsive y lógica del cliente |
-| Supabase (SDK JS v2) | Base de datos: mesas, horarios, reservas y platos |
-| Vercel | Despliegue continuo desde GitHub |
-| Figma | Diseño de alta fidelidad (`KONYS.fig`) |
-| Python 3 + Selenium WebDriver | Pruebas automáticas end-to-end en Chrome o Edge |
-| ReportLab | Generación del reporte PDF de las pruebas |
+| Supabase (SDK JS v2)                   | Base de datos: mesas, horarios, reservas y platos  |
+| Vercel                                 | Despliegue continuo desde GitHub                   |
+| Figma                                  | Diseño de alta fidelidad (`KONYS.fig`)          |
+| Python 3 + Selenium WebDriver          | Pruebas automáticas end-to-end en Chrome o Edge   |
+| ReportLab                              | Generación del reporte PDF de las pruebas         |
 
 ## Estructura
 
@@ -95,21 +98,21 @@ Si `SUPABASE_URL` está vacío, la app funciona en **modo demo**: usa datos de e
 
 ## Funcionalidades (trazabilidad)
 
-| Requisito | Dónde |
-|---|---|
-| RF-01 Visualización de mesas (nombre, zona, capacidad, estado) | `index.html#mesas` · `cliente.js › renderMesas` |
-| RF-02 Selección de mesa | Botón *Reservar / Ver horarios* → modal de reserva |
-| RF-03 Elección de fecha (solo días habilitados) | Calendario (escritorio) y tira de días (móvil) |
-| RF-04 Slots disponibles y ocupados | `ui.js › generarSlots` (cada 30 min según jornada y duración) |
-| RF-05 Reserva con nombre, personas (≤ capacidad) y contacto opcional | Formulario + validaciones + `supabase.js › crearReserva` |
-| RF-06 Confirmación con los datos y código | Vista *Reserva confirmada* (permite imprimir el comprobante) |
-| RF-07 Carta por categorías (oculta los no disponibles) | `index.html#carta` |
-| RF-08 Acceso al panel (contraseña local en demo; correo de Supabase Auth si hay claves) | `admin.html` |
-| RF-09 / RF-10 Registro y listado de mesas | Panel › Mesas |
-| RF-11 Horarios por día y duración | Panel › Horarios (con vista previa de slots) |
-| RF-12 Reservas con filtros por fecha y mesa | Panel › Reservas |
-| RF-13 Activar / desactivar mesas | Toggle en Panel › Mesas |
-| RF-14 Agregar, editar, ocultar y eliminar platos | Panel › Carta |
+| Requisito                                                                                | Dónde                                                             |
+| ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| RF-01 Visualización de mesas (nombre, zona, capacidad, estado)                          | `index.html#mesas` · `cliente.js › renderMesas`              |
+| RF-02 Selección de mesa                                                                 | Botón *Reservar / Ver horarios* → modal de reserva             |
+| RF-03 Elección de fecha (solo días habilitados)                                        | Calendario (escritorio) y tira de días (móvil)                   |
+| RF-04 Slots disponibles y ocupados                                                       | `ui.js › generarSlots` (cada 30 min según jornada y duración) |
+| RF-05 Reserva con nombre, personas (≤ capacidad) y contacto opcional                    | Formulario + validaciones + `supabase.js › crearReserva`        |
+| RF-06 Confirmación con los datos y código                                              | Vista *Reserva confirmada* (permite imprimir el comprobante)     |
+| RF-07 Carta por categorías (oculta los no disponibles)                                  | `index.html#carta`                                               |
+| RF-08 Acceso al panel (contraseña local en demo; correo de Supabase Auth si hay claves) | `admin.html`                                                     |
+| RF-09 / RF-10 Registro y listado de mesas                                                | Panel › Mesas                                                     |
+| RF-11 Horarios por día y duración                                                      | Panel › Horarios (con vista previa de slots)                      |
+| RF-12 Reservas con filtros por fecha y mesa                                              | Panel › Reservas                                                  |
+| RF-13 Activar / desactivar mesas                                                         | Toggle en Panel › Mesas                                           |
+| RF-14 Agregar, editar, ocultar y eliminar platos                                         | Panel › Carta                                                     |
 
 **Estados de error contemplados:** horario tomado por otra persona antes de confirmar (verificación en el servidor + restricción de exclusión que impide reservas superpuestas), capacidad excedida, días u horarios sin disponibilidad, campos obligatorios y teléfono con formato inválido, contraseña demo incorrecta, correo o contraseña de Auth incorrectos, cuenta que no está en `administradores`, y validaciones en los formularios del panel.
 
@@ -146,49 +149,49 @@ python pruebas/pruebas_reservas.py
 python pruebas/pruebas_reservas.py --rapido --oculto --sin-abrir
 ```
 
-| Opción | Efecto |
-|---|---|
-| `--rapido` | Quita las pausas y el efecto de tecleo. |
-| `--oculto` | Ejecuta el navegador en modo headless. |
-| `--sin-abrir` | No abre el PDF automáticamente al terminar. |
-| `--navegador chrome` / `--navegador edge` | Fuerza un navegador concreto. |
+| Opción                                       | Efecto                                       |
+| --------------------------------------------- | -------------------------------------------- |
+| `--rapido`                                  | Quita las pausas y el efecto de tecleo.      |
+| `--oculto`                                  | Ejecuta el navegador en modo headless.       |
+| `--sin-abrir`                               | No abre el PDF automáticamente al terminar. |
+| `--navegador chrome` / `--navegador edge` | Fuerza un navegador concreto.                |
 
 El programa devuelve `0` si todas las pruebas pasan, `1` si hay fallos y `3` si no se pudo generar el reporte.
 
 ### Qué se prueba
 
-| # | Grupo | Prueba | Verifica |
-|---|---|---|---|
-| 01 | Carga | La página principal carga | 4 mesas activas y el título de Konys Pizza. |
-| 02 | Carga | Estilos y scripts disponibles | CSS, utilidades, validaciones y capa de datos cargadas en modo demo. |
-| 03 | Carga | Carta y etiqueta de modo demo | 8 platos visibles y la etiqueta «Modo demo». |
-| 04 | Carga | Cuadrícula de escritorio | Las mesas se distribuyen en 4 columnas a 1440 px. |
-| 05 | Mesas | Filtro Terraza | Quedan 2 mesas, todas de Terraza. |
-| 06 | Mesas | Filtro Salón | Quedan 2 mesas, todas de Salón. |
-| 07 | Mesas | Mesas inactivas ocultas | La Mesa 5 (inactiva) nunca se muestra. |
-| 08 | Carta | Filtro Pizzas | La categoría muestra 4 platos con su etiqueta. |
-| 09 | Carta | Filtro Bebidas | La categoría muestra Limonada y Gaseosa. |
-| 10 | Carta | Precio en pesos colombianos | La Pizza Konys Especial muestra $34.000. |
-| 11 | Validaciones | Reserva con campos vacíos | Errores de nombre, personas y hora, sin registrar. |
-| 12 | Validaciones | Nombre con números | «Ana 123» se rechaza: solo letras y espacios. |
-| 13 | Validaciones | Nombre demasiado corto | «Al» se rechaza por tener menos de 3 letras. |
-| 14 | Validaciones | Teléfono incompleto | «300 12» se rechaza por no tener 10 dígitos. |
-| 15 | Validaciones | Cero personas | No se permite reservar con 0 personas. |
-| 16 | Validaciones | Capacidad excedida | La Mesa 1 (capacidad 2) bloquea una reserva de 3. |
-| 17 | Comportamiento | Teléfono con espacios | «300 123 4567» se normaliza y permite confirmar. |
-| 18 | Comportamiento | El error desaparece al corregir | El mensaje se oculta al escribir un nombre válido. |
-| 19 | Comportamiento | Botones + y - de personas | El contador aumenta y disminuye correctamente. |
-| 20 | Comportamiento | Cerrar el modal con Esc | El modal de reserva se cierra con la tecla Esc. |
-| 21 | Registro | Reserva exitosa | Se confirma con un código `KNY-AAAA-NNNN`. |
-| 22 | Registro | Resumen de la confirmación | Muestra cliente, mesa, zona, personas, fecha y hora. |
-| 23 | Registro | Volver al inicio | Oculta la confirmación y restaura la página. |
-| 24 | Registro | Prevención de doble reserva | El horario reservado queda ocupado al reabrir la mesa. |
-| 25 | Seguridad | HTML mostrado como texto | Un nombre con HTML se escapa y no se ejecuta. |
-| 26 | Celular | Diseño a 375 px | La cuadrícula pasa a 1 columna y el menú hamburguesa funciona. |
-| 27 | Administración | Contraseña incorrecta | El panel rechaza la clave y permanece en el login. |
-| 28 | Administración | Acceso al panel | La clave correcta abre el Resumen con sus 5 secciones. |
-| 29 | Administración | Crear una mesa | La mesa creada aparece en la tabla del panel. |
-| 30 | Administración | Buscar y ocultar un plato | El plato oculto desaparece de la carta pública. |
+| #  | Grupo           | Prueba                          | Verifica                                                             |
+| -- | --------------- | ------------------------------- | -------------------------------------------------------------------- |
+| 01 | Carga           | La página principal carga      | 4 mesas activas y el título de Konys Pizza.                         |
+| 02 | Carga           | Estilos y scripts disponibles   | CSS, utilidades, validaciones y capa de datos cargadas en modo demo. |
+| 03 | Carga           | Carta y etiqueta de modo demo   | 8 platos visibles y la etiqueta «Modo demo».                       |
+| 04 | Carga           | Cuadrícula de escritorio       | Las mesas se distribuyen en 4 columnas a 1440 px.                    |
+| 05 | Mesas           | Filtro Terraza                  | Quedan 2 mesas, todas de Terraza.                                    |
+| 06 | Mesas           | Filtro Salón                   | Quedan 2 mesas, todas de Salón.                                     |
+| 07 | Mesas           | Mesas inactivas ocultas         | La Mesa 5 (inactiva) nunca se muestra.                               |
+| 08 | Carta           | Filtro Pizzas                   | La categoría muestra 4 platos con su etiqueta.                      |
+| 09 | Carta           | Filtro Bebidas                  | La categoría muestra Limonada y Gaseosa.                            |
+| 10 | Carta           | Precio en pesos colombianos     | La Pizza Konys Especial muestra $34.000.                             |
+| 11 | Validaciones    | Reserva con campos vacíos      | Errores de nombre, personas y hora, sin registrar.                   |
+| 12 | Validaciones    | Nombre con números             | «Ana 123» se rechaza: solo letras y espacios.                      |
+| 13 | Validaciones    | Nombre demasiado corto          | «Al» se rechaza por tener menos de 3 letras.                       |
+| 14 | Validaciones    | Teléfono incompleto            | «300 12» se rechaza por no tener 10 dígitos.                      |
+| 15 | Validaciones    | Cero personas                   | No se permite reservar con 0 personas.                               |
+| 16 | Validaciones    | Capacidad excedida              | La Mesa 1 (capacidad 2) bloquea una reserva de 3.                    |
+| 17 | Comportamiento  | Teléfono con espacios          | «300 123 4567» se normaliza y permite confirmar.                   |
+| 18 | Comportamiento  | El error desaparece al corregir | El mensaje se oculta al escribir un nombre válido.                  |
+| 19 | Comportamiento  | Botones + y - de personas       | El contador aumenta y disminuye correctamente.                       |
+| 20 | Comportamiento  | Cerrar el modal con Esc         | El modal de reserva se cierra con la tecla Esc.                      |
+| 21 | Registro        | Reserva exitosa                 | Se confirma con un código `KNY-AAAA-NNNN`.                        |
+| 22 | Registro        | Resumen de la confirmación     | Muestra cliente, mesa, zona, personas, fecha y hora.                 |
+| 23 | Registro        | Volver al inicio                | Oculta la confirmación y restaura la página.                       |
+| 24 | Registro        | Prevención de doble reserva    | El horario reservado queda ocupado al reabrir la mesa.               |
+| 25 | Seguridad       | HTML mostrado como texto        | Un nombre con HTML se escapa y no se ejecuta.                        |
+| 26 | Celular         | Diseño a 375 px                | La cuadrícula pasa a 1 columna y el menú hamburguesa funciona.     |
+| 27 | Administración | Contraseña incorrecta          | El panel rechaza la clave y permanece en el login.                   |
+| 28 | Administración | Acceso al panel                 | La clave correcta abre el Resumen con sus 5 secciones.               |
+| 29 | Administración | Crear una mesa                  | La mesa creada aparece en la tabla del panel.                        |
+| 30 | Administración | Buscar y ocultar un plato       | El plato oculto desaparece de la carta pública.                     |
 
 ### Reporte PDF
 
@@ -213,11 +216,11 @@ Si PyMuPDF está instalado, la suite también guarda la portada del reporte en `
 
 ### Capturas de la aplicación
 
-| Escritorio | Móvil |
-|---|---|
-| ![Página principal](docs/capturas/pagina-principal.png) | ![Diseño móvil](docs/capturas/celular.png) |
-| ![Mesas y filtros](docs/capturas/mesas.png) | ![Carta por categorías](docs/capturas/carta.png) |
-| ![Validaciones del formulario](docs/capturas/validaciones.png) | ![Formulario de reserva](docs/capturas/reserva.png) |
+| Escritorio                                                     | Móvil                                               |
+| -------------------------------------------------------------- | ---------------------------------------------------- |
+| ![Página principal](docs/capturas/pagina-principal.png)       | ![Diseño móvil](docs/capturas/celular.png)         |
+| ![Mesas y filtros](docs/capturas/mesas.png)                    | ![Carta por categorías](docs/capturas/carta.png)    |
+| ![Validaciones del formulario](docs/capturas/validaciones.png) | ![Formulario de reserva](docs/capturas/reserva.png)  |
 | ![Confirmación de la reserva](docs/capturas/confirmacion.png) | ![Panel de administración](docs/capturas/admin.png) |
 
 ![Portada del reporte de pruebas](docs/capturas/reporte.png)
